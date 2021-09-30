@@ -94,7 +94,7 @@ namespace uhttpsharpdemo
         }
         public Task Handle(IHttpContext context, Func<Task> next)
         {
-            context.Response = uhttpsharp.HttpResponse.CreateWithMessage(HttpResponseCode.Ok, "Hello!" + _index, true);
+            context.Response = HttpResponse.CreateWithMessage(HttpResponseCode.Ok, "Hello!" + _index, true);
             return Task.Factory.GetCompleted();
         }
 
@@ -125,7 +125,7 @@ namespace uhttpsharpdemo
 
     internal class MyHandler : IHttpRequestHandler
     {
-        public System.Threading.Tasks.Task Handle(IHttpContext context, Func<System.Threading.Tasks.Task> next)
+        public Task Handle(IHttpContext context, Func<Task> next)
         {
             var model = new ModelBinder(new ObjectActivator()).Get<MyModel>(context.Request.QueryString);
 

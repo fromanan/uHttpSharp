@@ -16,6 +16,10 @@
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>543ee8e0</NuGetPackageImportStamp>
   </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>uhttpsharp-tests.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>True</SignAssembly>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
