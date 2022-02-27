@@ -2,12 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using uhttpsharp.RequestProviders;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp.Headers
 {
@@ -28,7 +26,7 @@ namespace uhttpsharp.Headers
 
     internal class HttpPost : IHttpPost
     {
-        public static async Task<IHttpPost> Create(IStreamReader reader, int postContentLength, ILog logger)
+        public static async Task<IHttpPost> Create(IStreamReader reader, int postContentLength)
         {
             byte[] raw = await reader.ReadBytes(postContentLength).ConfigureAwait(false);
             return new HttpPost(raw, postContentLength);

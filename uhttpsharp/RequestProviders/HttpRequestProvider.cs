@@ -1,20 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using uhttpsharp.Headers;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp.RequestProviders
 {
     public class HttpRequestProvider : IHttpRequestProvider
     {
         private static readonly char[] Separators = { '/' };
-
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
 
         public async Task<IHttpRequest> Provide(IStreamReader reader)
         {
@@ -92,7 +86,7 @@ namespace uhttpsharp.RequestProviders
             IHttpPost post;
             if (headers.TryGetByName("content-length", out int postContentLength) && postContentLength > 0)
             {
-                post = await HttpPost.Create(streamReader, postContentLength, Logger).ConfigureAwait(false);
+                post = await HttpPost.Create(streamReader, postContentLength).ConfigureAwait(false);
             }
             else
             {

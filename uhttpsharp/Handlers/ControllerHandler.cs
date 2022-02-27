@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using uhttpsharp.Attributes;
 using uhttpsharp.Controllers;
-using uhttpsharp.Logging;
 using uhttpsharp.ModelBinders;
 
 namespace uhttpsharp.Handlers
@@ -17,8 +16,6 @@ namespace uhttpsharp.Handlers
     /// </summary>
     public class ControllerHandler : IHttpRequestHandler
     {
-        private static readonly ILog Logger = LogProvider.For<ControllerHandler>();
-
         private sealed class ControllerMethod
         {
             public ControllerMethod(Type controllerType, HttpMethods method)
@@ -232,7 +229,8 @@ namespace uhttpsharp.Handlers
 
                 if (returnedTask != null) return await returnedTask.ConfigureAwait(false);
                 
-                Logger.Info(
+                // TODO: Logger.Info
+                Console.WriteLine(
                     "Returned task from indexer function was null. It may happen when we cannot convert from string to wanted type.");
             }
 

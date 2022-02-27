@@ -25,7 +25,6 @@ using System.Threading.Tasks;
 using uhttpsharp.Clients;
 using uhttpsharp.Headers;
 using uhttpsharp.RequestProviders;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp
 {
@@ -33,8 +32,6 @@ namespace uhttpsharp
     {
         private const string CrLf = "\r\n";
         private static readonly byte[] CrLfBuffer = Encoding.UTF8.GetBytes(CrLf);
-
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
 
         private readonly Func<IHttpContext, Task> _requestHandler;
         private readonly IHttpRequestProvider _requestProvider;
@@ -48,7 +45,9 @@ namespace uhttpsharp
             _requestHandler = requestHandler;
             _requestProvider = requestProvider;
 
-            Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+            // TODO:
+            // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+            Console.WriteLine($"Got Client {_remoteEndPoint}");
 
             Task.Factory.StartNew(Process);
 
@@ -84,7 +83,9 @@ namespace uhttpsharp
 
                         HttpContext context = new HttpContext(request, Client.RemoteEndPoint);
 
-                        Logger.InfoFormat("{1} : Got request {0}", request.Uri, Client.RemoteEndPoint);
+                        // TODO:
+                        // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+                        Console.WriteLine($"{Client.RemoteEndPoint} : Got request {request.Uri}");
 
                         await _requestHandler(context).ConfigureAwait(false);
 
@@ -112,13 +113,18 @@ namespace uhttpsharp
             catch (Exception e)
             {
                 // Hate people who make bad calls.
-                Logger.WarnException($"Error while serving : {_remoteEndPoint}", e);
+                // TODO:
+                //Logger.WarnException($"Error while serving : {_remoteEndPoint}", e);
+                Console.WriteLine($"Error while serving : {_remoteEndPoint}");
+                Console.WriteLine(e.Message);
                 Client.Close();
             }
 
-            Logger.InfoFormat("Lost Client {0}", _remoteEndPoint);
+            // TODO:
+            // Logger.InfoFormat("Lost Client {0}", _remoteEndPoint);
+            Console.WriteLine($"Lost Client {_remoteEndPoint}");
         }
-        private async Task WriteResponse(IHttpContext context, StreamWriter writer)
+        private static async Task WriteResponse(IHttpContext context, StreamWriter writer)
         {
             IHttpResponse response = context.Response;
             IHttpRequest request = context.Request;

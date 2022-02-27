@@ -18,18 +18,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading.Tasks;
 using uhttpsharp.Listeners;
 using uhttpsharp.RequestProviders;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp
 {
     public sealed class HttpServer : IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
-
         private bool _isActive;
 
         private readonly IList<IHttpRequestHandler> _handlers = new List<IHttpRequestHandler>();
@@ -62,7 +58,9 @@ namespace uhttpsharp
                 Task.Factory.StartNew(() => Listen(tempListener));
             }
 
-            Logger.InfoFormat("Embedded uhttpserver started.");
+            // TODO:
+            // Logger.InfoFormat("Embedded uhttpserver started.");
+            Console.WriteLine("Embedded uhttpserver started.");
         }
 
         private async void Listen(IHttpListener listener)
@@ -79,11 +77,16 @@ namespace uhttpsharp
                 }
                 catch (Exception e)
                 {
-                    Logger.WarnException("Error while getting client", e);
+                    // TODO:
+                    // Logger.WarnException("Error while getting client", e);
+                    Console.WriteLine("Error while getting client");
+                    Console.WriteLine(e.Message);
                 }
             }
 
-            Logger.InfoFormat("Embedded uhttpserver stopped.");
+            // TODO:
+            // Logger.InfoFormat("Embedded uhttpserver stopped.");
+            Console.WriteLine("Embedded uhttpserver stopped.");
         }
 
         public void Dispose()

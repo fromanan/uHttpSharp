@@ -28,6 +28,8 @@
 
 // Define LIBLOG_PORTABLE conditional compilation symbol for PCL compatibility
 
+#if FALSE
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1947,3 +1949,5 @@ namespace uhttpsharp.Logging.LogProviders
         }
     }
 }
+
+#endif
