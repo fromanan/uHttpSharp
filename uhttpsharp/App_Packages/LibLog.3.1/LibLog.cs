@@ -28,15 +28,21 @@
 
 // Define LIBLOG_PORTABLE conditional compilation symbol for PCL compatibility
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using uhttpsharp.Logging.LogProviders;
+
 #pragma warning disable 1591
 
 namespace uhttpsharp.Logging
 {
-    using System.Collections.Generic;
-    using uhttpsharp.Logging.LogProviders;
-    using System;
-    using System.Diagnostics;
-
     /// <summary>
     /// Simple interface that represent a logger.
     /// </summary>
@@ -56,7 +62,7 @@ namespace uhttpsharp.Logging
         /// 
         /// To check IsEnabled call Log with only LogLevel and check the return value, no event will be written.
         /// </remarks>
-        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters );
+        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters);
     }
 
     /// <summary>
@@ -139,7 +145,6 @@ namespace uhttpsharp.Logging
                 logger.Log(LogLevel.Debug, message.AsFunc(), exception);
             }
         }
-
 
         public static void DebugException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
@@ -301,7 +306,7 @@ namespace uhttpsharp.Logging
         {
             if (logger == null)
             {
-                throw new ArgumentNullException("logger");
+                throw new ArgumentNullException(nameof(logger));
             }
         }
 
@@ -376,7 +381,7 @@ namespace uhttpsharp.Logging
         /// <returns>An instance of <see cref="ILog"/></returns>
         public static ILog GetCurrentClassLogger()
         {
-            var stackFrame = new StackFrame(1, false);
+            StackFrame stackFrame = new StackFrame(1, false);
             return GetLogger(stackFrame.GetMethod().DeclaringType);
         }
 #endif
@@ -411,12 +416,13 @@ namespace uhttpsharp.Logging
             _currentLogProvider = logProvider;
         }
 
-        public static IDisposable OpenNestedConext(string message)
+        public static IDisposable OpenNestedContext(string message)
         {
-            if(_currentLogProvider == null)
+            if (_currentLogProvider == null)
             {
                 throw new InvalidOperationException(NullLogProvider);
             }
+
             return _currentLogProvider.OpenNestedContext(message);
         }
 
@@ -426,6 +432,7 @@ namespace uhttpsharp.Logging
             {
                 throw new InvalidOperationException(NullLogProvider);
             }
+
             return _currentLogProvider.OpenMappedContext(key, value);
         }
 
@@ -435,25 +442,27 @@ namespace uhttpsharp.Logging
 
         public static readonly List<Tuple<IsLoggerAvailable, CreateLogProvider>> LogProviderResolvers =
             new List<Tuple<IsLoggerAvailable, CreateLogProvider>>
-        {
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(SerilogLogProvider.IsLoggerAvailable, () => new SerilogLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(NLogLogProvider.IsLoggerAvailable, () => new NLogLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(Log4NetLogProvider.IsLoggerAvailable, () => new Log4NetLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(EntLibLogProvider.IsLoggerAvailable, () => new EntLibLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(LoupeLogProvider.IsLoggerAvailable, () => new LoupeLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(ColouredConsoleLogProvider.IsLoggerAvailable, () => new ColouredConsoleLogProvider()),
-        };
+            {
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(SerilogLogProvider.IsLoggerAvailable,
+                    () => new SerilogLogProvider()),
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(NLogLogProvider.IsLoggerAvailable, () => new NLogLogProvider()),
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(Log4NetLogProvider.IsLoggerAvailable,
+                    () => new Log4NetLogProvider()),
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(EntLibLogProvider.IsLoggerAvailable,
+                    () => new EntLibLogProvider()),
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(LoupeLogProvider.IsLoggerAvailable,
+                    () => new LoupeLogProvider()),
+                new Tuple<IsLoggerAvailable, CreateLogProvider>(ColouredConsoleLogProvider.IsLoggerAvailable,
+                    () => new ColouredConsoleLogProvider()),
+            };
 
         private static ILogProvider ResolveLogProvider()
         {
             try
             {
-                foreach (var providerResolver in LogProviderResolvers)
+                foreach (Tuple<IsLoggerAvailable, CreateLogProvider> providerResolver in LogProviderResolvers.Where(providerResolver => providerResolver.Item1()))
                 {
-                    if (providerResolver.Item1())
-                    {
-                        return providerResolver.Item2();
-                    }
+                    return providerResolver.Item2();
                 }
             }
             catch (Exception ex)
@@ -467,6 +476,7 @@ namespace uhttpsharp.Logging
                     typeof(LogProvider).GetAssemblyPortable().FullName,
                     ex);
             }
+
             return null;
         }
 
@@ -481,27 +491,24 @@ namespace uhttpsharp.Logging
 
     internal class LoggerExecutionWrapper : ILog
     {
-        private readonly ILog _logger;
         internal const string FailedToGenerateLogMessage = "Failed to generate log message";
 
         internal LoggerExecutionWrapper(ILog logger)
         {
-            _logger = logger;
+            WrappedLogger = logger;
         }
 
-        public ILog WrappedLogger
-        {
-            get { return _logger; }
-        }
+        public ILog WrappedLogger { get; }
 
-        public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters)
+        public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null,
+            params object[] formatParameters)
         {
             if (messageFunc == null)
             {
-                return _logger.Log(logLevel, null);
+                return WrappedLogger.Log(logLevel, null);
             }
 
-            Func<string> wrappedMessageFunc = () =>
+            string WrappedMessageFunc()
             {
                 try
                 {
@@ -511,26 +518,21 @@ namespace uhttpsharp.Logging
                 {
                     Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
                 }
+
                 return null;
-            };
-            return _logger.Log(logLevel, wrappedMessageFunc, exception, formatParameters);
+            }
+
+            return WrappedLogger.Log(logLevel, WrappedMessageFunc, exception, formatParameters);
         }
     }
 }
 
 namespace uhttpsharp.Logging.LogProviders
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using System.Text;
-    using System.Text.RegularExpressions;
-
     internal abstract class LogProviderBase : ILogProvider
     {
         protected delegate IDisposable OpenNdc(string message);
+
         protected delegate IDisposable OpenMdc(string key, string value);
 
         private readonly Lazy<OpenNdc> _lazyOpenNdcMethod;
@@ -539,14 +541,14 @@ namespace uhttpsharp.Logging.LogProviders
 
         protected LogProviderBase()
         {
-            _lazyOpenNdcMethod 
+            _lazyOpenNdcMethod
                 = new Lazy<OpenNdc>(GetOpenNdcMethod);
             _lazyOpenMdcMethod
-               = new Lazy<OpenMdc>(GetOpenMdcMethod);
+                = new Lazy<OpenMdc>(GetOpenMdcMethod);
         }
 
         public abstract ILog GetLogger(string name);
-        
+
         public IDisposable OpenNestedContext(string message)
         {
             return _lazyOpenNdcMethod.Value(message);
@@ -571,7 +573,6 @@ namespace uhttpsharp.Logging.LogProviders
     internal class NLogLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
 
         public NLogLogProvider()
         {
@@ -579,14 +580,11 @@ namespace uhttpsharp.Logging.LogProviders
             {
                 throw new InvalidOperationException("NLog.LogManager not found");
             }
+
             _getLoggerByNameDelegate = GetGetLoggerMethodCall();
         }
 
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         public override ILog GetLogger(string name)
         {
@@ -601,7 +599,7 @@ namespace uhttpsharp.Logging.LogProviders
         protected override OpenNdc GetOpenNdcMethod()
         {
             Type ndcContextType = Type.GetType("NLog.NestedDiagnosticsContext, NLog");
-            MethodInfo pushMethod = ndcContextType.GetMethodPortable("Push", new[] { typeof(string) });
+            MethodInfo pushMethod = ndcContextType.GetMethodPortable("Push", typeof(string));
             ParameterExpression messageParam = Expression.Parameter(typeof(string), "message");
             MethodCallExpression pushMethodCall = Expression.Call(null, pushMethod, messageParam);
             return Expression.Lambda<OpenNdc>(pushMethodCall, messageParam).Compile();
@@ -611,8 +609,8 @@ namespace uhttpsharp.Logging.LogProviders
         {
             Type mdcContextType = Type.GetType("NLog.MappedDiagnosticsContext, NLog");
 
-            MethodInfo setMethod = mdcContextType.GetMethodPortable("Set", new[] { typeof(string), typeof(string) });
-            MethodInfo removeMethod = mdcContextType.GetMethodPortable("Remove", new[] { typeof(string) });
+            MethodInfo setMethod = mdcContextType.GetMethodPortable("Set", typeof(string), typeof(string));
+            MethodInfo removeMethod = mdcContextType.GetMethodPortable("Remove", typeof(string));
             ParameterExpression keyParam = Expression.Parameter(typeof(string), "key");
             ParameterExpression valueParam = Expression.Parameter(typeof(string), "value");
 
@@ -641,7 +639,7 @@ namespace uhttpsharp.Logging.LogProviders
         private static Func<string, object> GetGetLoggerMethodCall()
         {
             Type logManagerType = GetLogManagerType();
-            MethodInfo method = logManagerType.GetMethodPortable("GetLogger", new[] { typeof(string) });
+            MethodInfo method = logManagerType.GetMethodPortable("GetLogger", typeof(string));
             ParameterExpression nameParam = Expression.Parameter(typeof(string), "name");
             MethodCallExpression methodCall = Expression.Call(null, method, nameParam);
             return Expression.Lambda<Func<string, object>>(methodCall, nameParam).Compile();
@@ -662,12 +660,14 @@ namespace uhttpsharp.Logging.LogProviders
                 {
                     return IsLogLevelEnable(logLevel);
                 }
+
                 messageFunc = LogMessageFormatter.SimulateStructuredLogging(messageFunc, formatParameters);
 
-                if(exception != null)
+                if (exception != null)
                 {
                     return LogException(logLevel, messageFunc, exception);
                 }
+
                 switch (logLevel)
                 {
                     case LogLevel.Debug:
@@ -676,6 +676,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Debug(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Info:
                         if (_logger.IsInfoEnabled)
@@ -683,6 +684,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Info(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (_logger.IsWarnEnabled)
@@ -690,6 +692,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Warn(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (_logger.IsErrorEnabled)
@@ -697,6 +700,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Error(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (_logger.IsFatalEnabled)
@@ -704,6 +708,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Fatal(messageFunc());
                             return true;
                         }
+
                         break;
                     default:
                         if (_logger.IsTraceEnabled)
@@ -711,8 +716,10 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Trace(messageFunc());
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
 
@@ -726,6 +733,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.DebugException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Info:
                         if (_logger.IsInfoEnabled)
@@ -733,6 +741,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.InfoException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (_logger.IsWarnEnabled)
@@ -740,6 +749,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.WarnException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (_logger.IsErrorEnabled)
@@ -747,6 +757,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.ErrorException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (_logger.IsFatalEnabled)
@@ -754,6 +765,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.FatalException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     default:
                         if (_logger.IsTraceEnabled)
@@ -761,8 +773,10 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.TraceException(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
 
@@ -790,7 +804,6 @@ namespace uhttpsharp.Logging.LogProviders
     internal class Log4NetLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
 
         public Log4NetLogProvider()
         {
@@ -798,14 +811,11 @@ namespace uhttpsharp.Logging.LogProviders
             {
                 throw new InvalidOperationException("log4net.LogManager not found");
             }
+
             _getLoggerByNameDelegate = GetGetLoggerMethodCall();
         }
 
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         public override ILog GetLogger(string name)
         {
@@ -820,7 +830,7 @@ namespace uhttpsharp.Logging.LogProviders
         protected override OpenNdc GetOpenNdcMethod()
         {
             Type ndcContextType = Type.GetType("log4net.NDC, log4net");
-            MethodInfo pushMethod = ndcContextType.GetMethodPortable("Push", new[] { typeof(string) });
+            MethodInfo pushMethod = ndcContextType.GetMethodPortable("Push", typeof(string));
             ParameterExpression messageParam = Expression.Parameter(typeof(string), "message");
             MethodCallExpression pushMethodCall = Expression.Call(null, pushMethod, messageParam);
             return Expression.Lambda<OpenNdc>(pushMethodCall, messageParam).Compile();
@@ -830,8 +840,8 @@ namespace uhttpsharp.Logging.LogProviders
         {
             Type mdcContextType = Type.GetType("log4net.MDC, log4net");
 
-            MethodInfo setMethod = mdcContextType.GetMethodPortable("Set", new[] { typeof(string), typeof(string) });
-            MethodInfo removeMethod = mdcContextType.GetMethodPortable("Remove", new[] { typeof(string) });
+            MethodInfo setMethod = mdcContextType.GetMethodPortable("Set", typeof(string), typeof(string));
+            MethodInfo removeMethod = mdcContextType.GetMethodPortable("Remove", typeof(string));
             ParameterExpression keyParam = Expression.Parameter(typeof(string), "key");
             ParameterExpression valueParam = Expression.Parameter(typeof(string), "value");
 
@@ -860,7 +870,7 @@ namespace uhttpsharp.Logging.LogProviders
         private static Func<string, object> GetGetLoggerMethodCall()
         {
             Type logManagerType = GetLogManagerType();
-            MethodInfo method = logManagerType.GetMethodPortable("GetLogger", new[] { typeof(string) });
+            MethodInfo method = logManagerType.GetMethodPortable("GetLogger", typeof(string));
             ParameterExpression nameParam = Expression.Parameter(typeof(string), "name");
             MethodCallExpression methodCall = Expression.Call(null, method, nameParam);
             return Expression.Lambda<Func<string, object>>(methodCall, nameParam).Compile();
@@ -888,6 +898,7 @@ namespace uhttpsharp.Logging.LogProviders
                 {
                     return LogException(logLevel, messageFunc, exception);
                 }
+
                 switch (logLevel)
                 {
                     case LogLevel.Info:
@@ -896,6 +907,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Info(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (_logger.IsWarnEnabled)
@@ -903,6 +915,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Warn(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (_logger.IsErrorEnabled)
@@ -910,6 +923,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Error(messageFunc());
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (_logger.IsFatalEnabled)
@@ -917,15 +931,19 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Fatal(messageFunc());
                             return true;
                         }
+
                         break;
                     default:
                         if (_logger.IsDebugEnabled)
                         {
-                            _logger.Debug(messageFunc()); // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
+                            _logger.Debug(
+                                messageFunc()); // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
 
@@ -939,6 +957,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Info(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (_logger.IsWarnEnabled)
@@ -946,6 +965,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Warn(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (_logger.IsErrorEnabled)
@@ -953,6 +973,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Error(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (_logger.IsFatalEnabled)
@@ -960,6 +981,7 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Fatal(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                     default:
                         if (_logger.IsDebugEnabled)
@@ -967,8 +989,10 @@ namespace uhttpsharp.Logging.LogProviders
                             _logger.Debug(messageFunc(), exception);
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
 
@@ -995,8 +1019,8 @@ namespace uhttpsharp.Logging.LogProviders
 
     internal class EntLibLogProvider : LogProviderBase
     {
-        private const string TypeTemplate = "Microsoft.Practices.EnterpriseLibrary.Logging.{0}, Microsoft.Practices.EnterpriseLibrary.Logging";
-        private static bool _providerIsAvailableOverride = true;
+        private const string TypeTemplate =
+            "Microsoft.Practices.EnterpriseLibrary.Logging.{0}, Microsoft.Practices.EnterpriseLibrary.Logging";
         private static readonly Type LogEntryType;
         private static readonly Type LoggerType;
         private static readonly Type TraceEventTypeType;
@@ -1009,11 +1033,12 @@ namespace uhttpsharp.Logging.LogProviders
             LoggerType = Type.GetType(string.Format(TypeTemplate, "Logger"));
             TraceEventTypeType = TraceEventTypeValues.Type;
             if (LogEntryType == null
-                 || TraceEventTypeType == null
-                 || LoggerType == null)
+                || TraceEventTypeType == null
+                || LoggerType == null)
             {
                 return;
             }
+
             WriteLogEntry = GetWriteLogEntry();
             ShouldLogEntry = GetShouldLogEntry();
         }
@@ -1026,11 +1051,7 @@ namespace uhttpsharp.Logging.LogProviders
             }
         }
 
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         public override ILog GetLogger(string name)
         {
@@ -1040,16 +1061,16 @@ namespace uhttpsharp.Logging.LogProviders
         internal static bool IsLoggerAvailable()
         {
             return ProviderIsAvailableOverride
-                 && TraceEventTypeType != null
-                 && LogEntryType != null;
+                   && TraceEventTypeType != null
+                   && LogEntryType != null;
         }
 
         private static Action<string, string, int> GetWriteLogEntry()
         {
             // new LogEntry(...)
-            var logNameParameter = Expression.Parameter(typeof(string), "logName");
-            var messageParameter = Expression.Parameter(typeof(string), "message");
-            var severityParameter = Expression.Parameter(typeof(int), "severity");
+            ParameterExpression logNameParameter = Expression.Parameter(typeof(string), "logName");
+            ParameterExpression messageParameter = Expression.Parameter(typeof(string), "message");
+            ParameterExpression severityParameter = Expression.Parameter(typeof(int), "severity");
 
             MemberInitExpression memberInit = GetWriteLogExpression(
                 messageParameter,
@@ -1057,8 +1078,8 @@ namespace uhttpsharp.Logging.LogProviders
                 logNameParameter);
 
             //Logger.Write(new LogEntry(....));
-            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("Write", new[] { LogEntryType });
-            var writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
+            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("Write", LogEntryType);
+            MethodCallExpression writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
 
             return Expression.Lambda<Action<string, string, int>>(
                 writeLogEntryExpression,
@@ -1070,8 +1091,8 @@ namespace uhttpsharp.Logging.LogProviders
         private static Func<string, int, bool> GetShouldLogEntry()
         {
             // new LogEntry(...)
-            var logNameParameter = Expression.Parameter(typeof(string), "logName");
-            var severityParameter = Expression.Parameter(typeof(int), "severity");
+            ParameterExpression logNameParameter = Expression.Parameter(typeof(string), "logName");
+            ParameterExpression severityParameter = Expression.Parameter(typeof(int), "severity");
 
             MemberInitExpression memberInit = GetWriteLogExpression(
                 Expression.Constant("***dummy***"),
@@ -1079,8 +1100,8 @@ namespace uhttpsharp.Logging.LogProviders
                 logNameParameter);
 
             //Logger.Write(new LogEntry(....));
-            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("ShouldLog", new[] { LogEntryType });
-            var writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
+            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("ShouldLog", LogEntryType);
+            MethodCallExpression writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
 
             return Expression.Lambda<Func<string, int, bool>>(
                 writeLogEntryExpression,
@@ -1089,21 +1110,19 @@ namespace uhttpsharp.Logging.LogProviders
         }
 
         private static MemberInitExpression GetWriteLogExpression(Expression message,
-            Expression severityParameter, ParameterExpression logNameParameter)
+            Expression severityParameter, Expression logNameParameter)
         {
-            var entryType = LogEntryType;
-            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType), new []
-            {
+            Type entryType = LogEntryType;
+            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType),
                 Expression.Bind(entryType.GetPropertyPortable("Message"), message),
-                Expression.Bind(entryType.GetPropertyPortable("Severity"), severityParameter),
-                Expression.Bind(entryType.GetPropertyPortable("TimeStamp"),
-                    Expression.Property(null, typeof (DateTime).GetPropertyPortable("UtcNow"))),
-                Expression.Bind(entryType.GetPropertyPortable("Categories"),
+                Expression.Bind(entryType.GetPropertyPortable("Severity"), severityParameter), Expression.Bind(
+                    entryType.GetPropertyPortable("TimeStamp"),
+                    Expression.Property(null, typeof(DateTime).GetPropertyPortable("UtcNow"))), Expression.Bind(
+                    entryType.GetPropertyPortable("Categories"),
                     Expression.ListInit(
-                        Expression.New(typeof (List<string>)),
-                        typeof (List<string>).GetMethodPortable("Add", new[] {typeof (string)}),
-                        logNameParameter))
-            });
+                        Expression.New(typeof(List<string>)),
+                        typeof(List<string>).GetMethodPortable("Add", typeof(string)),
+                        logNameParameter)));
             return memberInit;
         }
 
@@ -1122,26 +1141,26 @@ namespace uhttpsharp.Logging.LogProviders
 
             public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
             {
-                var severity = MapSeverity(logLevel);
+                int severity = MapSeverity(logLevel);
                 if (messageFunc == null)
                 {
                     return _shouldLog(_loggerName, severity);
                 }
-
 
                 messageFunc = LogMessageFormatter.SimulateStructuredLogging(messageFunc, formatParameters);
                 if (exception != null)
                 {
                     return LogException(logLevel, messageFunc, exception);
                 }
+
                 _writeLog(_loggerName, messageFunc(), severity);
                 return true;
             }
 
             public bool LogException(LogLevel logLevel, Func<string> messageFunc, Exception exception)
             {
-                var severity = MapSeverity(logLevel);
-                var message = messageFunc() + Environment.NewLine + exception;
+                int severity = MapSeverity(logLevel);
+                string message = messageFunc() + Environment.NewLine + exception;
                 _writeLog(_loggerName, message, severity);
                 return true;
             }
@@ -1168,7 +1187,6 @@ namespace uhttpsharp.Logging.LogProviders
     internal class SerilogLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
 
         public SerilogLogProvider()
         {
@@ -1176,14 +1194,11 @@ namespace uhttpsharp.Logging.LogProviders
             {
                 throw new InvalidOperationException("Serilog.Log not found");
             }
+
             _getLoggerByNameDelegate = GetForContextMethodCall();
         }
 
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         public override ILog GetLogger(string name)
         {
@@ -1209,26 +1224,20 @@ namespace uhttpsharp.Logging.LogProviders
         {
             Type ndcContextType = Type.GetType("Serilog.Context.LogContext, Serilog.FullNetFx");
             MethodInfo pushPropertyMethod = ndcContextType.GetMethodPortable(
-                "PushProperty",
-                new[]
-                {
-                    typeof(string),
-                    typeof(object),
-                    typeof(bool)
-                });
+                "PushProperty", typeof(string), typeof(object), typeof(bool));
             ParameterExpression nameParam = Expression.Parameter(typeof(string), "name");
             ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
             ParameterExpression destructureObjectParam = Expression.Parameter(typeof(bool), "destructureObjects");
             MethodCallExpression pushPropertyMethodCall = Expression
                 .Call(null, pushPropertyMethod, nameParam, valueParam, destructureObjectParam);
-            var pushProperty = Expression
+            Func<string, object, bool, IDisposable> pushProperty = Expression
                 .Lambda<Func<string, object, bool, IDisposable>>(
                     pushPropertyMethodCall,
                     nameParam,
                     valueParam,
                     destructureObjectParam)
                 .Compile();
-            
+
             return (key, value) => pushProperty(key, value, false);
         }
 
@@ -1240,21 +1249,22 @@ namespace uhttpsharp.Logging.LogProviders
         private static Func<string, object> GetForContextMethodCall()
         {
             Type logManagerType = GetLogManagerType();
-            MethodInfo method = logManagerType.GetMethodPortable("ForContext", new[] { typeof(string), typeof(object), typeof(bool) });
+            MethodInfo method =
+                logManagerType.GetMethodPortable("ForContext", typeof(string), typeof(object), typeof(bool));
             ParameterExpression propertyNameParam = Expression.Parameter(typeof(string), "propertyName");
             ParameterExpression valueParam = Expression.Parameter(typeof(object), "value");
             ParameterExpression destructureObjectsParam = Expression.Parameter(typeof(bool), "destructureObjects");
             MethodCallExpression methodCall = Expression.Call(null, method, new Expression[]
             {
-                propertyNameParam, 
+                propertyNameParam,
                 valueParam,
                 destructureObjectsParam
             });
-            var func = Expression.Lambda<Func<string, object, bool, object>>(
-                methodCall,
-                propertyNameParam,
-                valueParam,
-                destructureObjectsParam)
+            Func<string, object, bool, object> func = Expression.Lambda<Func<string, object, bool, object>>(
+                    methodCall,
+                    propertyNameParam,
+                    valueParam,
+                    destructureObjectsParam)
                 .Compile();
             return name => func("Name", name, false);
         }
@@ -1274,7 +1284,7 @@ namespace uhttpsharp.Logging.LogProviders
 
             static SerilogLogger()
             {
-                var logEventTypeType = Type.GetType("Serilog.Events.LogEventLevel, Serilog");
+                Type logEventTypeType = Type.GetType("Serilog.Events.LogEventLevel, Serilog");
                 DebugLevel = Enum.Parse(logEventTypeType, "Debug", false);
                 ErrorLevel = Enum.Parse(logEventTypeType, "Error", false);
                 FatalLevel = Enum.Parse(logEventTypeType, "Fatal", false);
@@ -1283,39 +1293,38 @@ namespace uhttpsharp.Logging.LogProviders
                 WarningLevel = Enum.Parse(logEventTypeType, "Warning", false);
 
                 // Func<object, object, bool> isEnabled = (logger, level) => { return ((SeriLog.ILogger)logger).IsEnabled(level); }
-                var loggerType = Type.GetType("Serilog.ILogger, Serilog");
-                var logEventLevelType = Type.GetType("Serilog.Events.LogEventLevel, Serilog");
+                Type loggerType = Type.GetType("Serilog.ILogger, Serilog");
+                Type logEventLevelType = Type.GetType("Serilog.Events.LogEventLevel, Serilog");
                 MethodInfo isEnabledMethodInfo = loggerType.GetMethodPortable("IsEnabled", logEventLevelType);
                 ParameterExpression instanceParam = Expression.Parameter(typeof(object));
                 UnaryExpression instanceCast = Expression.Convert(instanceParam, loggerType);
                 ParameterExpression levelParam = Expression.Parameter(typeof(object));
                 UnaryExpression levelCast = Expression.Convert(levelParam, logEventTypeType);
                 MethodCallExpression isEnabledMethodCall = Expression.Call(instanceCast, isEnabledMethodInfo, levelCast);
-                IsEnabled = Expression.Lambda<Func<object, object, bool>>(isEnabledMethodCall, instanceParam, levelParam).Compile();
+                IsEnabled = Expression.Lambda<Func<object, object, bool>>(isEnabledMethodCall, instanceParam, levelParam)
+                    .Compile();
 
                 // Action<object, object, string> Write =
                 // (logger, level, message, params) => { ((SeriLog.ILoggerILogger)logger).Write(level, message, params); }
-                MethodInfo writeMethodInfo = loggerType.GetMethodPortable("Write", new[] { logEventTypeType, typeof(string), typeof(object[]) });
+                MethodInfo writeMethodInfo =
+                    loggerType.GetMethodPortable("Write", logEventTypeType, typeof(string), typeof(object[]));
                 ParameterExpression messageParam = Expression.Parameter(typeof(string));
                 ParameterExpression propertyValuesParam = Expression.Parameter(typeof(object[]));
-                MethodCallExpression writeMethodExp = Expression.Call(instanceCast, writeMethodInfo, levelCast, messageParam, propertyValuesParam);
-                var expression = Expression.Lambda<Action<object, object, string, object[]>>(
-                    writeMethodExp, 
-                    instanceParam,
-                    levelParam,
-                    messageParam,
-                    propertyValuesParam);
+                MethodCallExpression writeMethodExp =
+                    Expression.Call(instanceCast, writeMethodInfo, levelCast, messageParam, propertyValuesParam);
+                Expression<Action<object, object, string, object[]>> expression =
+                    Expression.Lambda<Action<object, object, string, object[]>>(
+                        writeMethodExp,
+                        instanceParam,
+                        levelParam,
+                        messageParam,
+                        propertyValuesParam);
                 Write = expression.Compile();
 
                 // Action<object, object, string, Exception> WriteException =
                 // (logger, level, exception, message) => { ((ILogger)logger).Write(level, exception, message, new object[]); }
-                MethodInfo writeExceptionMethodInfo = loggerType.GetMethodPortable("Write", new[]
-                {
-                    logEventTypeType,
-                    typeof(Exception), 
-                    typeof(string),
-                    typeof(object[])
-                });
+                MethodInfo writeExceptionMethodInfo = loggerType.GetMethodPortable("Write", logEventTypeType, typeof(Exception),
+                    typeof(string), typeof(object[]));
                 ParameterExpression exceptionParam = Expression.Parameter(typeof(Exception));
                 writeMethodExp = Expression.Call(
                     instanceCast,
@@ -1325,7 +1334,7 @@ namespace uhttpsharp.Logging.LogProviders
                     messageParam,
                     propertyValuesParam);
                 WriteException = Expression.Lambda<Action<object, object, Exception, string, object[]>>(
-                    writeMethodExp, 
+                    writeMethodExp,
                     instanceParam,
                     levelParam,
                     exceptionParam,
@@ -1344,6 +1353,7 @@ namespace uhttpsharp.Logging.LogProviders
                 {
                     return IsEnabled(_logger, logLevel);
                 }
+
                 if (exception != null)
                 {
                     return LogException(logLevel, messageFunc, exception, formatParameters);
@@ -1357,6 +1367,7 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, DebugLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                     case LogLevel.Info:
                         if (IsEnabled(_logger, InformationLevel))
@@ -1364,6 +1375,7 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, InformationLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (IsEnabled(_logger, WarningLevel))
@@ -1371,6 +1383,7 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, WarningLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (IsEnabled(_logger, ErrorLevel))
@@ -1378,6 +1391,7 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, ErrorLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (IsEnabled(_logger, FatalLevel))
@@ -1385,6 +1399,7 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, FatalLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                     default:
                         if (IsEnabled(_logger, VerboseLevel))
@@ -1392,8 +1407,10 @@ namespace uhttpsharp.Logging.LogProviders
                             Write(_logger, VerboseLevel, messageFunc(), formatParameters);
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
 
@@ -1407,6 +1424,7 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, DebugLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                     case LogLevel.Info:
                         if (IsEnabled(_logger, InformationLevel))
@@ -1414,6 +1432,7 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, InformationLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                     case LogLevel.Warn:
                         if (IsEnabled(_logger, WarningLevel))
@@ -1421,6 +1440,7 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, WarningLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                     case LogLevel.Error:
                         if (IsEnabled(_logger, ErrorLevel))
@@ -1428,6 +1448,7 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, ErrorLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                     case LogLevel.Fatal:
                         if (IsEnabled(_logger, FatalLevel))
@@ -1435,6 +1456,7 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, FatalLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                     default:
                         if (IsEnabled(_logger, VerboseLevel))
@@ -1442,8 +1464,10 @@ namespace uhttpsharp.Logging.LogProviders
                             WriteException(_logger, VerboseLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
+
                         break;
                 }
+
                 return false;
             }
         }
@@ -1466,9 +1490,8 @@ namespace uhttpsharp.Logging.LogProviders
             string caption,
             string description,
             params object[] args
-            );
+        );
 
-        private static bool _providerIsAvailableOverride = true;
         private readonly WriteDelegate _logWriteDelegate;
 
         public LoupeLogProvider()
@@ -1487,11 +1510,7 @@ namespace uhttpsharp.Logging.LogProviders
         /// <value>
         /// <c>true</c> if [provider is available override]; otherwise, <c>false</c>.
         /// </value>
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         public override ILog GetLogger(string name)
         {
@@ -1515,14 +1534,10 @@ namespace uhttpsharp.Logging.LogProviders
             Type logWriteModeType = Type.GetType("Gibraltar.Agent.LogWriteMode, Gibraltar.Agent");
 
             MethodInfo method = logManagerType.GetMethodPortable(
-                "Write",
-                new[]
-                {
-                    logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool), 
-                    logWriteModeType, typeof(string), typeof(string), typeof(string), typeof(string), typeof(object[])
-                });
+                "Write", logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool), logWriteModeType,
+                typeof(string), typeof(string), typeof(string), typeof(string), typeof(object[]));
 
-            var callDelegate = (WriteDelegate)method.CreateDelegate(typeof(WriteDelegate));
+            WriteDelegate callDelegate = (WriteDelegate)method.CreateDelegate(typeof(WriteDelegate));
             return callDelegate;
         }
 
@@ -1557,7 +1572,7 @@ namespace uhttpsharp.Logging.LogProviders
                 return true;
             }
 
-            private int ToLogMessageSeverity(LogLevel logLevel)
+            private static int ToLogMessageSeverity(LogLevel logLevel)
             {
                 switch (logLevel)
                 {
@@ -1574,7 +1589,7 @@ namespace uhttpsharp.Logging.LogProviders
                     case LogLevel.Fatal:
                         return TraceEventTypeValues.Critical;
                     default:
-                        throw new ArgumentOutOfRangeException("logLevel");
+                        throw new ArgumentOutOfRangeException(nameof(logLevel));
                 }
             }
         }
@@ -1591,11 +1606,13 @@ namespace uhttpsharp.Logging.LogProviders
 
         static TraceEventTypeValues()
         {
-            var assembly = typeof(Uri).GetAssemblyPortable(); // This is to get to the System.dll assembly in a PCL compatible way.
+            Assembly assembly =
+                typeof(Uri).GetAssemblyPortable(); // This is to get to the System.dll assembly in a PCL compatible way.
             if (assembly == null)
             {
                 return;
             }
+
             Type = assembly.GetType("System.Diagnostics.TraceEventType");
             if (Type == null) return;
             Verbose = (int)Enum.Parse(Type, "Verbose", false);
@@ -1613,9 +1630,8 @@ namespace uhttpsharp.Logging.LogProviders
         private static readonly Action<string> ConsoleWriteLine;
         private static readonly Func<int> GetConsoleForeground;
         private static readonly Action<int> SetConsoleForeground;
-        private static bool _providerIsAvailableOverride = true;
         private static readonly IDictionary<LogLevel, int> Colors;
- 
+
         static ColouredConsoleLogProvider()
         {
             ConsoleType = Type.GetType("System.Console");
@@ -1628,14 +1644,14 @@ namespace uhttpsharp.Logging.LogProviders
 
             MessageFormatter = DefaultMessageFormatter;
             Colors = new Dictionary<LogLevel, int>
-                {
-                    {LogLevel.Fatal, ConsoleColorValues.Red},
-                    {LogLevel.Error, ConsoleColorValues.Yellow},
-                    {LogLevel.Warn, ConsoleColorValues.Magenta},
-                    {LogLevel.Info, ConsoleColorValues.White},
-                    {LogLevel.Debug, ConsoleColorValues.Gray},
-                    {LogLevel.Trace, ConsoleColorValues.DarkGray},
-                };
+            {
+                { LogLevel.Fatal, ConsoleColorValues.Red },
+                { LogLevel.Error, ConsoleColorValues.Yellow },
+                { LogLevel.Warn, ConsoleColorValues.Magenta },
+                { LogLevel.Info, ConsoleColorValues.White },
+                { LogLevel.Debug, ConsoleColorValues.Gray },
+                { LogLevel.Trace, ConsoleColorValues.DarkGray },
+            };
             ConsoleWriteLine = GetConsoleWrite();
             GetConsoleForeground = GetGetConsoleForeground();
             SetConsoleForeground = GetSetConsoleForeground();
@@ -1667,42 +1683,37 @@ namespace uhttpsharp.Logging.LogProviders
 
         internal static MessageFormatterDelegate MessageFormatter { get; set; }
 
-        public static bool ProviderIsAvailableOverride
-        {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
-        }
+        public static bool ProviderIsAvailableOverride { get; set; } = true;
 
         protected static string DefaultMessageFormatter(string loggerName, LogLevel level, object message, Exception e)
         {
-            var stringBuilder = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append(DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss", CultureInfo.InvariantCulture));
             stringBuilder.Append(" ");
-            
+
             // Append a readable representation of the log level
-            stringBuilder.Append(("[" + level.ToString().ToUpper() + "]").PadRight(8));
-            stringBuilder.Append("(" + loggerName + ") ");
+            stringBuilder.Append($"[{level.ToString().ToUpper()}]".PadRight(8));
+            stringBuilder.Append($"({loggerName}) ");
 
             // Append the message
             stringBuilder.Append(message);
 
             // Append stack trace if there is an exception
-            if (e != null)
-            {
-                stringBuilder.Append(Environment.NewLine).Append(e.GetType());
-                stringBuilder.Append(Environment.NewLine).Append(e.Message);
-                stringBuilder.Append(Environment.NewLine).Append(e.StackTrace);
-            }
+            if (e == null) return stringBuilder.ToString();
+
+            stringBuilder.Append(Environment.NewLine).Append(e.GetType());
+            stringBuilder.Append(Environment.NewLine).Append(e.Message);
+            stringBuilder.Append(Environment.NewLine).Append(e.StackTrace);
 
             return stringBuilder.ToString();
         }
 
         private static Action<string> GetConsoleWrite()
         {
-            var messageParameter = Expression.Parameter(typeof(string), "message");
+            ParameterExpression messageParameter = Expression.Parameter(typeof(string), "message");
 
-            MethodInfo writeMethod = ConsoleType.GetMethodPortable("WriteLine", new[] { typeof(string) });
-            var writeExpression = Expression.Call(writeMethod, messageParameter);
+            MethodInfo writeMethod = ConsoleType.GetMethodPortable("WriteLine", typeof(string));
+            MethodCallExpression writeExpression = Expression.Call(writeMethod, messageParameter);
 
             return Expression.Lambda<Action<string>>(
                 writeExpression, messageParameter).Compile();
@@ -1711,17 +1722,17 @@ namespace uhttpsharp.Logging.LogProviders
         private static Func<int> GetGetConsoleForeground()
         {
             MethodInfo getForeground = ConsoleType.GetPropertyPortable("ForegroundColor").GetGetMethod();
-            var getForegroundExpression = Expression.Convert(Expression.Call(getForeground), typeof(int));
+            UnaryExpression getForegroundExpression = Expression.Convert(Expression.Call(getForeground), typeof(int));
 
             return Expression.Lambda<Func<int>>(getForegroundExpression).Compile();
         }
 
         private static Action<int> GetSetConsoleForeground()
         {
-            var colorParameter = Expression.Parameter(typeof(int), "color");
+            ParameterExpression colorParameter = Expression.Parameter(typeof(int), "color");
 
             MethodInfo setForeground = ConsoleType.GetPropertyPortable("ForegroundColor").GetSetMethod();
-            var setForegroundExpression = Expression.Call(setForeground,
+            MethodCallExpression setForegroundExpression = Expression.Call(setForeground,
                 Expression.Convert(colorParameter, ConsoleColorType));
 
             return Expression.Lambda<Action<int>>(
@@ -1760,12 +1771,11 @@ namespace uhttpsharp.Logging.LogProviders
 
             protected void Write(LogLevel logLevel, string message, Exception e = null)
             {
-                var formattedMessage = MessageFormatter(this._name, logLevel, message, e);
-                int color;
+                string formattedMessage = MessageFormatter(_name, logLevel, message, e);
 
-                if (Colors.TryGetValue(logLevel, out color))
+                if (Colors.TryGetValue(logLevel, out int color))
                 {
-                    var originalColor = _getForeground();
+                    int originalColor = _getForeground();
                     try
                     {
                         _setForeground(color);
@@ -1823,7 +1833,7 @@ namespace uhttpsharp.Logging.LogProviders
         /// <returns></returns>
         public static Func<string> SimulateStructuredLogging(Func<string> messageBuilder, object[] formatParameters)
         {
-            if(formatParameters == null)
+            if (formatParameters == null)
             {
                 return messageBuilder;
             }
@@ -1834,20 +1844,20 @@ namespace uhttpsharp.Logging.LogProviders
                 int argumentIndex = 0;
                 foreach (Match match in Pattern.Matches(targetMessage))
                 {
-                    int notUsed;
-                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length -2), out notUsed))
+                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length - 2), out int _))
                     {
-                        targetMessage = ReplaceFirst(targetMessage, match.Value,
-                            "{" + argumentIndex++ + "}");
+                        targetMessage = ReplaceFirst(targetMessage, match.Value, $"{{{argumentIndex++}}}");
                     }
                 }
+
                 try
                 {
-                    return String.Format(CultureInfo.InvariantCulture, targetMessage, formatParameters);
+                    return string.Format(CultureInfo.InvariantCulture, targetMessage, formatParameters);
                 }
                 catch (FormatException ex)
                 {
-                    throw new FormatException("The input string '" + targetMessage + "' could not be formatted using string.Format", ex);
+                    throw new FormatException(
+                        $"The input string '{targetMessage}' could not be formatted using string.Format", ex);
                 }
             };
         }
@@ -1859,6 +1869,7 @@ namespace uhttpsharp.Logging.LogProviders
             {
                 return text;
             }
+
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
     }
@@ -1932,10 +1943,7 @@ namespace uhttpsharp.Logging.LogProviders
 
         public void Dispose()
         {
-            if(_onDispose != null)
-            {
-                _onDispose();
-            }
+            _onDispose?.Invoke();
         }
     }
 }

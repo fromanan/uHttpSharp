@@ -6,10 +6,8 @@ namespace uhttpsharp.Handlers.Compression
     {
         public static readonly ICompressor Default = new DeflateCompressor();
 
-        public string Name
-        {
-            get { return "deflate"; }
-        }
+        public string Name => "deflate";
+        
         public Task<IHttpResponse> Compress(IHttpResponse response)
         {
             return CompressedResponse.CreateDeflate(response);

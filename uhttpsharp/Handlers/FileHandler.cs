@@ -31,34 +31,31 @@ namespace uhttpsharp.Handlers
 
         static FileHandler()
         {
-
             DefaultMimeType = "text/plain";
             MimeTypes = new Dictionary<string, string>
-                            {
-                                {".css", "text/css"},
-                                {".gif", "image/gif"},
-                                {".htm", "text/html"},
-                                {".html", "text/html"},
-                                {".jpg", "image/jpeg"},
-                                {".js", "application/javascript"},
-                                {".png", "image/png"},
-                                {".xml", "application/xml"},
-                            };
+            {
+                { ".css", "text/css" },
+                { ".gif", "image/gif" },
+                { ".htm", "text/html" },
+                { ".html", "text/html" },
+                { ".jpg", "image/jpeg" },
+                { ".js", "application/javascript" },
+                { ".png", "image/png" },
+                { ".xml", "application/xml" },
+            };
         }
 
-        private string GetContentType(string path)
+        private static string GetContentType(string path)
         {
-            var extension = Path.GetExtension(path) ?? string.Empty;
-            if (MimeTypes.ContainsKey(extension))
-                return MimeTypes[extension];
-            return DefaultMimeType;
+            string extension = Path.GetExtension(path) ?? string.Empty;
+            return MimeTypes.ContainsKey(extension) ? MimeTypes[extension] : DefaultMimeType;
         }
         public async Task Handle(IHttpContext context, System.Func<Task> next)
         {
-            var requestPath = context.Request.Uri.OriginalString.TrimStart('/');
-            
-            var httpRoot = Path.GetFullPath(HttpRootDirectory ?? ".");
-            var path = Path.GetFullPath(Path.Combine(httpRoot, requestPath));
+            string requestPath = context.Request.Uri.OriginalString.TrimStart('/');
+
+            string httpRoot = Path.GetFullPath(HttpRootDirectory ?? ".");
+            string path = Path.GetFullPath(Path.Combine(httpRoot, requestPath));
 
             if (!File.Exists(path))
             {
@@ -66,8 +63,9 @@ namespace uhttpsharp.Handlers
 
                 return;
             }
-                
-            context.Response = new HttpResponse(GetContentType(path), File.OpenRead(path), context.Request.Headers.KeepAliveConnection());
+
+            context.Response = new HttpResponse(GetContentType(path), File.OpenRead(path),
+                context.Request.Headers.KeepAliveConnection());
         }
     }
 }

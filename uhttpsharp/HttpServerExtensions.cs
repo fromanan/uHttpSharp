@@ -5,12 +5,10 @@ namespace uhttpsharp
 {
     public static class HttpServerExtensions
     {
-
-        public static void  Use(this HttpServer server, Func<IHttpContext, Func<Task>, Task> method)
+        public static void Use(this HttpServer server, Func<IHttpContext, Func<Task>, Task> method)
         {
             server.Use(new AnonymousHttpRequestHandler(method));
         }
-
     }
 
     public class AnonymousHttpRequestHandler : IHttpRequestHandler
@@ -21,7 +19,6 @@ namespace uhttpsharp
         {
             _method = method;
         }
-
 
         public Task Handle(IHttpContext context, Func<Task> next)
         {

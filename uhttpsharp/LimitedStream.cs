@@ -4,7 +4,7 @@ using System.Text;
 
 namespace uhttpsharp
 {
-    class LoggingStream : Stream
+    internal class LoggingStream : Stream
     {
         private readonly Stream _child;
 
@@ -13,7 +13,7 @@ namespace uhttpsharp
         {
             _child = child;
 
-            Console.WriteLine("Logging to " + _tempFileName);
+            Console.WriteLine($"Logging to {_tempFileName}");
         }
 
         public override void Flush()
@@ -31,9 +31,9 @@ namespace uhttpsharp
         }
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var retVal = _child.Read(buffer, offset, count);
+            int retVal = _child.Read(buffer, offset, count);
 
-            using (var stream = File.Open(_tempFileName, FileMode.Append))
+            using (FileStream stream = File.Open(_tempFileName, FileMode.Append))
             {
                 stream.Seek(0, SeekOrigin.End);
                 stream.Write(buffer, offset, retVal);
@@ -44,9 +44,9 @@ namespace uhttpsharp
 
         public override int ReadByte()
         {
-            var retVal = _child.ReadByte();
+            int retVal = _child.ReadByte();
 
-            using (var stream = File.Open(_tempFileName, FileMode.Append))
+            using (FileStream stream = File.Open(_tempFileName, FileMode.Append))
             {
                 stream.Seek(0, SeekOrigin.End);
                 stream.WriteByte((byte)retVal);
@@ -57,50 +57,36 @@ namespace uhttpsharp
         public override void Write(byte[] buffer, int offset, int count)
         {
             _child.Write(buffer, offset, count);
-
         }
         public override void WriteByte(byte value)
         {
             _child.WriteByte(value);
+        }
+        public override bool CanRead => _child.CanRead;
+        public override bool CanSeek => _child.CanSeek;
 
-        }
-        public override bool CanRead
-        {
-            get { return _child.CanRead; }
-        }
-        public override bool CanSeek
-        {
-            get { return _child.CanSeek; }
-        }
-
-        public override bool CanWrite
-        {
-            get { return _child.CanWrite; }
-        }
-        public override long Length
-        {
-            get { return _child.Length; }
-        }
+        public override bool CanWrite => _child.CanWrite;
+        public override long Length => _child.Length;
         public override long Position
         {
-            get { return _child.Position; }
-            set { _child.Position = value; }
+            get => _child.Position;
+            set => _child.Position = value;
         }
         public override int ReadTimeout
         {
-            get { return _child.ReadTimeout; }
-            set { _child.ReadTimeout = value; }
+            get => _child.ReadTimeout;
+            set => _child.ReadTimeout = value;
         }
         public override int WriteTimeout
         {
-            get { return _child.WriteTimeout; }
-            set { _child.WriteTimeout = value; }
+            get => _child.WriteTimeout;
+            set => _child.WriteTimeout = value;
         }
     }
 
-    class LimitedStream : Stream
+    internal class LimitedStream : Stream
     {
-        private const string _exceptionMessageFormat = "The Stream has exceeded the {0} limit specified.";
+        private const string ExceptionMessageFormat = "The Stream has exceeded the {0} limit specified.";
         private readonly Stream _child;
         private long _readLimit;
         private long _writeLimit;
@@ -115,7 +101,7 @@ namespace uhttpsharp
         {
             _child.Flush();
         }
-        
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             return _child.Seek(offset, origin);
@@ -126,7 +112,7 @@ namespace uhttpsharp
         }
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var retVal = _child.Read(buffer, offset, count);
+            int retVal = _child.Read(buffer, offset, count);
 
             AssertReadLimit(retVal);
 
@@ -143,7 +129,7 @@ namespace uhttpsharp
 
             if (_readLimit < 0)
             {
-                throw new IOException(string.Format(_exceptionMessageFormat, "read"));
+                throw new IOException(string.Format(ExceptionMessageFormat, "read"));
             }
         }
 
@@ -158,13 +144,13 @@ namespace uhttpsharp
 
             if (_writeLimit < 0)
             {
-                throw new IOException(string.Format(_exceptionMessageFormat, "write"));
+                throw new IOException(string.Format(ExceptionMessageFormat, "write"));
             }
         }
 
         public override int ReadByte()
         {
-            var retVal = _child.ReadByte();
+            int retVal = _child.ReadByte();
 
             AssertReadLimit(1);
 
@@ -182,37 +168,25 @@ namespace uhttpsharp
 
             AssertWriteLimit(1);
         }
-        public override bool CanRead
-        {
-            get { return _child.CanRead; }
-        }
-        public override bool CanSeek
-        {
-            get { return _child.CanSeek; }
-        }
-        
-        public override bool CanWrite
-        {
-            get { return _child.CanWrite; }
-        }
-        public override long Length
-        {
-            get { return _child.Length; }
-        }
+        public override bool CanRead => _child.CanRead;
+        public override bool CanSeek => _child.CanSeek;
+
+        public override bool CanWrite => _child.CanWrite;
+        public override long Length => _child.Length;
         public override long Position
         {
-            get { return _child.Position; }
-            set { _child.Position = value; }
+            get => _child.Position;
+            set => _child.Position = value;
         }
         public override int ReadTimeout
         {
-            get { return _child.ReadTimeout; }
-            set { _child.ReadTimeout = value; }
+            get => _child.ReadTimeout;
+            set => _child.ReadTimeout = value;
         }
         public override int WriteTimeout
         {
-            get { return _child.WriteTimeout; }
-            set { _child.WriteTimeout = value; }
+            get => _child.WriteTimeout;
+            set => _child.WriteTimeout = value;
         }
     }
 }

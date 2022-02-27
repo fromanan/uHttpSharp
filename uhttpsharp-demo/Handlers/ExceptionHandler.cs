@@ -14,11 +14,12 @@ namespace uhttpsharpdemo.Handlers
             }
             catch (HttpException e)
             {
-                context.Response = new HttpResponse(e.ResponseCode, "Error while handling your request. " + e.Message, false);
+                context.Response = new HttpResponse(e.ResponseCode, $"Error while handling your request. {e.Message}", false);
             }
             catch (Exception e)
             {
-                context.Response = new HttpResponse(HttpResponseCode.InternalServerError, "Error while handling your request. " + e, false);
+                context.Response = new HttpResponse(HttpResponseCode.InternalServerError,
+                    "Error while handling your request. " + e, false);
             }
         }
     }

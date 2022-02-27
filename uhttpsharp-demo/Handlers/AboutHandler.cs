@@ -25,10 +25,10 @@ namespace uhttpsharpdemo.Handlers
 {
     public class AboutHandler : IHttpRequestHandler
     {
-
         public Task Handle(IHttpContext context, Func<Task> next)
         {
-            context.Response = HttpResponse.CreateWithMessage(HttpResponseCode.Ok, "Sample http-request-handler", context.Request.Headers.KeepAliveConnection());
+            context.Response = HttpResponse.CreateWithMessage(HttpResponseCode.Ok, "Sample http-request-handler",
+                context.Request.Headers.KeepAliveConnection());
 
             return Task.Factory.GetCompleted();
         }

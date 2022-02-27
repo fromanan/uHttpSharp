@@ -13,19 +13,13 @@ namespace uhttpsharp.Controllers
             _errors.Add(description);
         }
 
-        public IEnumerable<string> Errors
-        {
-            get { return _errors; }
-        }
-        public bool Any
-        {
-            get { return _errors.Count != 0; }
-        }
+        public IEnumerable<string> Errors => _errors;
+        public bool Any => _errors.Count != 0;
         public Task<IControllerResponse> GetResponse()
         {
             return
                 Task.FromResult<IControllerResponse>(new RenderResponse(HttpResponseCode.MethodNotAllowed,
-                    new {Message = string.Join(", ", _errors)}));
+                    new { Message = string.Join(", ", _errors) }));
         }
     }
 }

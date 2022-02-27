@@ -13,11 +13,10 @@ namespace uhttpsharpdemo.Handlers
 
         public async Task Handle(IHttpContext context, Func<Task> next)
         {
-            var stopWatch = Stopwatch.StartNew();
+            Stopwatch stopWatch = Stopwatch.StartNew();
             await next();
-            
-            Logger.InfoFormat("request {0} took {1}", context.Request.Uri, stopWatch.Elapsed);
 
+            Logger.InfoFormat("request {0} took {1}", context.Request.Uri, stopWatch.Elapsed);
         }
     }
 }

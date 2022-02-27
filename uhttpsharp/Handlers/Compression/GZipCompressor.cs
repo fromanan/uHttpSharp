@@ -6,10 +6,8 @@ namespace uhttpsharp.Handlers.Compression
     {
         public static readonly ICompressor Default = new GZipCompressor();
 
-        public string Name
-        {
-            get { return "gzip"; }
-        }
+        public string Name => "gzip";
+        
         public Task<IHttpResponse> Compress(IHttpResponse response)
         {
             return CompressedResponse.CreateGZip(response);

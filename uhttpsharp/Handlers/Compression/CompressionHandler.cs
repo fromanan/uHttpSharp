@@ -17,8 +17,8 @@ namespace uhttpsharp.Handlers.Compression
     public class CompressionHandler : IHttpRequestHandler
     {
         private readonly IEnumerable<ICompressor> _compressors;
-        private static readonly char[] Seperator = { ',' };
-        
+        private static readonly char[] Separator = { ',' };
+
         /// <summary>
         /// Creates an instance of <see cref="CompressionHandler"/>
         /// </summary>
@@ -37,15 +37,14 @@ namespace uhttpsharp.Handlers.Compression
                 return;
             }
 
-            string encodingNames;
-            if (!context.Request.Headers.TryGetByName("Accept-Encoding", out encodingNames))
+            if (!context.Request.Headers.TryGetByName("Accept-Encoding", out string encodingNames))
             {
                 return;
             }
 
-            var encodings = encodingNames.Split(Seperator, StringSplitOptions.RemoveEmptyEntries);
+            string[] encodings = encodingNames.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
 
-            var compressor =
+            ICompressor compressor =
                 _compressors.FirstOrDefault(c => encodings.Contains(c.Name, StringComparer.InvariantCultureIgnoreCase));
 
             if (compressor == null)

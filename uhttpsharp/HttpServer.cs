@@ -36,7 +36,6 @@ namespace uhttpsharp
         private readonly IList<IHttpListener> _listeners = new List<IHttpListener>();
         private readonly IHttpRequestProvider _requestProvider;
 
-
         public HttpServer(IHttpRequestProvider requestProvider)
         {
             _requestProvider = requestProvider;
@@ -56,7 +55,7 @@ namespace uhttpsharp
         {
             _isActive = true;
 
-            foreach (var listener in _listeners)
+            foreach (IHttpListener listener in _listeners)
             {
                 IHttpListener tempListener = listener;
 
@@ -68,13 +67,15 @@ namespace uhttpsharp
 
         private async void Listen(IHttpListener listener)
         {
-            var aggregatedHandler = _handlers.Aggregate();
+            Func<IHttpContext, Task> aggregatedHandler = _handlers.Aggregate();
 
             while (_isActive)
             {
                 try
                 {
-                    new HttpClientHandler(await listener.GetClient().ConfigureAwait(false), aggregatedHandler, _requestProvider);
+                    HttpClientHandler httpClientHandler = 
+                        new HttpClientHandler(await listener.GetClient().ConfigureAwait(false), aggregatedHandler,
+                        _requestProvider);
                 }
                 catch (Exception e)
                 {

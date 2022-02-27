@@ -7,7 +7,7 @@ namespace uhttpsharp
     {
         private readonly ConcurrentDictionary<string, HttpMethods> _cache = new ConcurrentDictionary<string, HttpMethods>();
 
-        private readonly Func<String, HttpMethods> _childProvide;
+        private readonly Func<string, HttpMethods> _childProvide;
         public HttpMethodProviderCache(IHttpMethodProvider child)
         {
             _childProvide = child.Provide;

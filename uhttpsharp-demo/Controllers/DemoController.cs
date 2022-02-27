@@ -22,6 +22,7 @@ namespace uhttpsharpdemo.Controllers
         {
             public string TheQuestion { get; set; }
         }
+
         public JsonController(int id)
         {
         }
@@ -31,24 +32,26 @@ namespace uhttpsharpdemo.Controllers
         {
             return Response.Render(HttpResponseCode.Ok, question).Result;
         }
-        public IPipeline Pipeline
-        {
-            get { return new EmptyPipeline(); }
-        }
+
+        public IPipeline Pipeline => new EmptyPipeline();
     }
+
     public class MyController
     {
         private readonly int _id;
+
         public MyController(int id)
         {
             _id = id;
         }
+
         public MyController()
         {
         }
 
         [HttpMethod(HttpMethods.Post)]
-        public Task<IControllerResponse> Post([FromPost("a")] MyRequest request, [FromHeaders("header")]string hello, [FromQuery("query")]string world)
+        public Task<IControllerResponse> Post([FromPost("a")] MyRequest request, [FromHeaders("header")] string hello,
+            [FromQuery("query")] string world)
         {
             return Response.Render(HttpResponseCode.Ok, null);
         }
@@ -59,9 +62,11 @@ namespace uhttpsharpdemo.Controllers
             return Task.FromResult<object>(new MyController(id));
         }
     }
+
     public class MyRequest : IValidate
     {
         public int A { get; set; }
+
         public void Validate(IErrorContainer container)
         {
             if (A == 0)
@@ -70,7 +75,8 @@ namespace uhttpsharpdemo.Controllers
             }
         }
     }
-    class BaseController : IController
+
+    internal class BaseController : IController
     {
         [HttpMethod(HttpMethods.Get)]
         public Task<IControllerResponse> Get()
@@ -84,18 +90,12 @@ namespace uhttpsharpdemo.Controllers
             return Response.Render(HttpResponseCode.Ok, a);
         }
 
-        public virtual IPipeline Pipeline
-        {
-            get { return new EmptyPipeline(); }
-        }
+        public virtual IPipeline Pipeline => new EmptyPipeline();
 
-        public IController Derived
-        {
-            get { return new DerivedController(); }
-        }
+        public IController Derived => new DerivedController();
     }
 
-    class DerivedController : BaseController
+    internal class DerivedController : BaseController
     {
         [HttpMethod(HttpMethods.Get)]
         public new Task<IControllerResponse> Get()
@@ -109,12 +109,10 @@ namespace uhttpsharpdemo.Controllers
             return Task.FromResult<IController>(this);
         }
 
-
         [Indexer(1)]
         public Task<IController> Indexer(IHttpContext context, string hey)
         {
             return Task.FromResult<IController>(this);
-        } 
-
+        }
     }
 }

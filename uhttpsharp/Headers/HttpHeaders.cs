@@ -13,33 +13,16 @@ namespace uhttpsharp.Headers
 {
     internal class EmptyHttpPost : IHttpPost
     {
-        private static readonly byte[] _emptyBytes = new byte[0];
+        private static readonly byte[] _emptyBytes = Array.Empty<byte>();
 
         public static readonly IHttpPost Empty = new EmptyHttpPost();
 
-        private EmptyHttpPost()
-        {
-
-        }
+        private EmptyHttpPost() { }
 
         #region IHttpPost implementation
+        public byte[] Raw => _emptyBytes;
 
-        public byte[] Raw
-        {
-            get
-            {
-                return _emptyBytes;
-            }
-        }
-
-        public IHttpHeaders Parsed
-        {
-            get
-            {
-                return EmptyHttpHeaders.Empty;
-            }
-        }
-
+        public IHttpHeaders Parsed => EmptyHttpHeaders.Empty;
         #endregion
     }
 
@@ -53,46 +36,28 @@ namespace uhttpsharp.Headers
 
         private readonly int _readBytes;
 
-        private readonly byte[] _raw;
-
         private readonly Lazy<IHttpHeaders> _parsed;
 
         public HttpPost(byte[] raw, int readBytes)
         {
-            _raw = raw;
+            Raw = raw;
             _readBytes = readBytes;
             _parsed = new Lazy<IHttpHeaders>(Parse);
         }
 
         private IHttpHeaders Parse()
         {
-            string body = Encoding.UTF8.GetString(_raw, 0, _readBytes);
-            var parsed = new QueryStringHttpHeaders(body);
-           
+            string body = Encoding.UTF8.GetString(Raw, 0, _readBytes);
+            QueryStringHttpHeaders parsed = new QueryStringHttpHeaders(body);
+
             return parsed;
         }
 
         #region IHttpPost implementation
+        public byte[] Raw { get; }
 
-        public byte[] Raw
-        {
-            get
-            {
-                return _raw;
-            }
-        }
-
-        public IHttpHeaders Parsed
-        {
-            get
-            {
-                return _parsed.Value;
-            }
-        }
-
+        public IHttpHeaders Parsed => _parsed.Value;
         #endregion
-
-
     }
 
     [DebuggerDisplay("{Count} Headers")]
@@ -100,6 +65,7 @@ namespace uhttpsharp.Headers
     public class ListHttpHeaders : IHttpHeaders
     {
         private readonly IList<KeyValuePair<string, string>> _values;
+        
         public ListHttpHeaders(IList<KeyValuePair<string, string>> values)
         {
             _values = values;
@@ -107,14 +73,16 @@ namespace uhttpsharp.Headers
 
         public string GetByName(string name)
         {
-            return _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase)).Select(kvp => kvp.Value).First();
+            return _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                .Select(kvp => kvp.Value).First();
         }
 
         public bool TryGetByName(string name, out string value)
         {
-            value = _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase)).Select(kvp => kvp.Value).FirstOrDefault();
+            value = _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                .Select(kvp => kvp.Value).FirstOrDefault();
 
-            return (value != default(string));
+            return value != default;
         }
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
@@ -127,15 +95,8 @@ namespace uhttpsharp.Headers
             return GetEnumerator();
         }
 
-        internal int Count
-        {
-            get
-            {
-                return _values.Count;
-            }
-        }
+        internal int Count => _values.Count;
     }
-
 
     [DebuggerDisplay("{Count} Headers")]
     [DebuggerTypeProxy(typeof(HttpHeadersDebuggerProxy))]
@@ -152,6 +113,7 @@ namespace uhttpsharp.Headers
         {
             return _values[name];
         }
+        
         public bool TryGetByName(string name, out string value)
         {
             return _values.TryGetValue(name, out value);
@@ -167,13 +129,6 @@ namespace uhttpsharp.Headers
             return GetEnumerator();
         }
 
-
-        internal int Count
-        {
-            get
-            {
-                return _values.Count;
-            }
-        }
+        internal int Count => _values.Count;
     }
 }

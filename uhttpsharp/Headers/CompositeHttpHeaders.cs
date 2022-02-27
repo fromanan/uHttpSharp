@@ -14,9 +14,9 @@ namespace uhttpsharp.Headers
     /// </summary>
     public class CompositeHttpHeaders : IHttpHeaders
     {
-        private static readonly IEqualityComparer<KeyValuePair<string, string>> HeaderComparer = 
+        private static readonly IEqualityComparer<KeyValuePair<string, string>> HeaderComparer =
             new KeyValueComparer<string, string, string>(k => k.Key, StringComparer.InvariantCultureIgnoreCase);
-        
+
         private readonly IEnumerable<IHttpHeaders> _children;
 
         public CompositeHttpHeaders(IEnumerable<IHttpHeaders> children)
@@ -24,28 +24,27 @@ namespace uhttpsharp.Headers
             _children = children;
         }
 
-        public CompositeHttpHeaders(params IHttpHeaders[] children) 
+        public CompositeHttpHeaders(params IHttpHeaders[] children)
         {
             _children = children;
         }
 
         public string GetByName(string name)
         {
-            foreach (var child in _children)
+            foreach (IHttpHeaders child in _children)
             {
-                string value;
-                if (child.TryGetByName(name, out value))
+                if (child.TryGetByName(name, out string value))
                 {
                     return value;
                 }
             }
 
-            throw new KeyNotFoundException(string.Format("Header {0} was not found in any of the children headers.", name));
+            throw new KeyNotFoundException($"Header {name} was not found in any of the children headers.");
         }
 
         public bool TryGetByName(string name, out string value)
         {
-            foreach (var child in _children)
+            foreach (IHttpHeaders child in _children)
             {
                 if (child.TryGetByName(name, out value))
                 {
@@ -71,7 +70,9 @@ namespace uhttpsharp.Headers
     public class KeyValueComparer<TKey, TValue, TOutput> : IEqualityComparer<KeyValuePair<TKey, TValue>>
     {
         private readonly Func<KeyValuePair<TKey, TValue>, TOutput> _outputFunc;
+        
         private readonly IEqualityComparer<TOutput> _outputComparer;
+        
         public KeyValueComparer(Func<KeyValuePair<TKey, TValue>, TOutput> outputFunc, IEqualityComparer<TOutput> outputComparer)
         {
             _outputFunc = outputFunc;
@@ -87,6 +88,5 @@ namespace uhttpsharp.Headers
         {
             return _outputComparer.GetHashCode(_outputFunc(obj));
         }
-
     }
 }

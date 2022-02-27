@@ -5,20 +5,16 @@ namespace uhttpsharpdemo
 {
     public class HttpException : Exception
     {
-        private readonly HttpResponseCode _responseCode;
-
-        public HttpResponseCode ResponseCode
-        {
-            get { return _responseCode; }
-        }
+        public HttpResponseCode ResponseCode { get; }
 
         public HttpException(HttpResponseCode responseCode)
         {
-            _responseCode = responseCode;
+            ResponseCode = responseCode;
         }
+        
         public HttpException(HttpResponseCode responseCode, string message) : base(message)
         {
-            _responseCode = responseCode;
+            ResponseCode = responseCode;
         }
     }
 }

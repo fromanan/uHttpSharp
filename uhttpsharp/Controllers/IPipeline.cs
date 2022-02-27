@@ -7,7 +7,6 @@ namespace uhttpsharp.Controllers
     /// <summary>
     /// Represents a series of functions and an entry point in which a function can be called at.
     /// </summary>
-
     public interface IPipeline
     {
         /// <summary>

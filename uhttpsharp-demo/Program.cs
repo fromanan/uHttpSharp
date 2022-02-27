@@ -43,7 +43,7 @@ namespace uhttpsharpdemo
 
             //var serverCertificate = X509Certificate.CreateFromCertFile(@"TempCert.cer");
 
-            using (var httpServer = new HttpServer(new HttpRequestProvider()))
+            using (HttpServer httpServer = new HttpServer(new HttpRequestProvider()))
             {
                 httpServer.Use(new TcpListenerAdapter(new TcpListener(IPAddress.Any, 82)));
                 //httpServer.Use(new ListenerSslDecorator(new TcpListenerAdapter(new TcpListener(IPAddress.Loopback, 443)), serverCertificate));
@@ -53,15 +53,17 @@ namespace uhttpsharpdemo
                 httpServer.Use(new ExceptionHandler());
                 httpServer.Use(new SessionHandler<dynamic>(() => new ExpandoObject(), TimeSpan.FromMinutes(20)));
                 httpServer.Use(new BasicAuthenticationHandler("Hohoho", "username", "password5"));
-                httpServer.Use(new ControllerHandler(new DerivedController(), new ModelBinder(new ObjectActivator()), new JsonView()));
+                httpServer.Use(new ControllerHandler(new DerivedController(), new ModelBinder(new ObjectActivator()),
+                    new JsonView()));
 
                 httpServer.Use(new CompressionHandler(DeflateCompressor.Default, GZipCompressor.Default));
-                httpServer.Use(new ControllerHandler(new BaseController(), new JsonModelBinder(), new JsonView(), StringComparer.OrdinalIgnoreCase));
+                httpServer.Use(new ControllerHandler(new BaseController(), new JsonModelBinder(), new JsonView(),
+                    StringComparer.OrdinalIgnoreCase));
                 httpServer.Use(new HttpRouter().With(string.Empty, new IndexHandler())
                     .With("about", new AboutHandler())
                     .With("Assets", new AboutHandler())
                     .With("strings", new RestHandler<string>(new StringsRestController(), JsonResponseProvider.Default)));
-                
+
                 httpServer.Use(new ClassRouter(new MySuperHandler()));
                 httpServer.Use(new TimingHandler());
 
@@ -77,7 +79,6 @@ namespace uhttpsharpdemo
                 httpServer.Start();
                 Console.ReadLine();
             }
-
         }
     }
 
@@ -89,7 +90,8 @@ namespace uhttpsharpdemo
         {
             get
             {
-                _index++; return this; 
+                _index++;
+                return this;
             }
         }
         public Task Handle(IHttpContext context, Func<Task> next)
@@ -98,40 +100,28 @@ namespace uhttpsharpdemo
             return Task.Factory.GetCompleted();
         }
 
-
         [Indexer]
         public Task<IHttpRequestHandler> GetChild(IHttpContext context, int index)
         {
             _index += index;
             return Task.FromResult<IHttpRequestHandler>(this);
         }
-
     }
 
-    class MyModel
+    internal class MyModel
     {
-        public int MyProperty
-        {
-            get;
-            set;
-        }
+        public int MyProperty { get; set; }
 
-        public MyModel Model
-        {
-            get;
-            set;
-        }
+        public MyModel Model { get; set; }
     }
 
     internal class MyHandler : IHttpRequestHandler
     {
         public Task Handle(IHttpContext context, Func<Task> next)
         {
-            var model = new ModelBinder(new ObjectActivator()).Get<MyModel>(context.Request.QueryString);
+            MyModel model = new ModelBinder(new ObjectActivator()).Get<MyModel>(context.Request.QueryString);
 
             return Task.Factory.GetCompleted();
         }
     }
-
-    
 }

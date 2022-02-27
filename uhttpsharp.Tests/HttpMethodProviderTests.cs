@@ -7,21 +7,13 @@ namespace uhttpsharp.Tests
 {
     public class HttpMethodProviderTests
     {
-
         private static IHttpMethodProvider GetTarget()
         {
             return new HttpMethodProvider();
         }
 
+        public static IEnumerable<object> Methods => Enum.GetNames(typeof(HttpMethods));
 
-        public static IEnumerable<object> Methods
-        {
-            get
-            {
-                return Enum.GetNames(typeof(HttpMethods));
-            }
-        }
-        
         [Test]
         [TestCase(HttpMethods.Connect)]
         [TestCase(HttpMethods.Delete)]
@@ -35,15 +27,14 @@ namespace uhttpsharp.Tests
         public void Should_Get_Right_Method(HttpMethods method)
         {
             // Arrange
-            var methodName = Enum.GetName(typeof(HttpMethods), method);
-            var target = GetTarget();
+            string methodName = Enum.GetName(typeof(HttpMethods), method);
+            IHttpMethodProvider target = GetTarget();
 
             // Act
-            var actual = target.Provide(methodName);
+            HttpMethods actual = target.Provide(methodName);
 
             // Assert
             actual.ToString().ShouldBe(methodName);
         }
-
     }
 }

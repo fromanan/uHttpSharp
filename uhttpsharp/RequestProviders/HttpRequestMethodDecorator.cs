@@ -6,47 +6,25 @@ namespace uhttpsharp.RequestProviders
     internal class HttpRequestMethodDecorator : IHttpRequest
     {
         private readonly IHttpRequest _child;
-        private readonly HttpMethods _method;
 
         public HttpRequestMethodDecorator(IHttpRequest child, HttpMethods method)
         {
             _child = child;
-            _method = method;
+            Method = method;
         }
 
-        public IHttpHeaders Headers
-        {
-            get { return _child.Headers; }
-        }
+        public IHttpHeaders Headers => _child.Headers;
 
-        public HttpMethods Method
-        {
-            get { return _method; }
-        }
+        public HttpMethods Method { get; }
 
-        public string Protocol
-        {
-            get { return _child.Protocol; }
-        }
+        public string Protocol => _child.Protocol;
 
-        public Uri Uri
-        {
-            get { return _child.Uri; }
-        }
+        public Uri Uri => _child.Uri;
 
-        public string[] RequestParameters
-        {
-            get { return _child.RequestParameters; }
-        }
+        public string[] RequestParameters => _child.RequestParameters;
 
-        public IHttpPost Post
-        {
-            get { return _child.Post; }
-        }
+        public IHttpPost Post => _child.Post;
 
-        public IHttpHeaders QueryString
-        {
-            get { return _child.QueryString; }
-        }
+        public IHttpHeaders QueryString => _child.QueryString;
     }
 }

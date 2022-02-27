@@ -7,7 +7,7 @@ namespace uhttpsharp.Headers
     internal class HttpHeadersDebuggerProxy
     {
         private readonly IHttpHeaders _real;
-        
+
         [DebuggerDisplay("{Value,nq}", Name = "{Key,nq}")]
         internal class HttpHeader
         {
@@ -17,21 +17,9 @@ namespace uhttpsharp.Headers
                 _header = header;
             }
 
-            public string Value
-            {
-                get
-                {
-                    return _header.Value;
-                }
-            }
+            public string Value => _header.Value;
 
-            public string Key
-            {
-                get
-                {
-                    return _header.Key;
-                }
-            }
+            public string Key => _header.Key;
         }
 
         public HttpHeadersDebuggerProxy(IHttpHeaders real)
@@ -42,11 +30,7 @@ namespace uhttpsharp.Headers
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public HttpHeader[] Headers
         {
-            get
-            {
-                return _real.Select(kvp => new HttpHeader(kvp)).ToArray();
-            }
+            get { return _real.Select(kvp => new HttpHeader(kvp)).ToArray(); }
         }
-
     }
 }

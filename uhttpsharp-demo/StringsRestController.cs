@@ -6,9 +6,9 @@ using uhttpsharp.Handlers;
 
 namespace uhttpsharpdemo
 {
-    class StringsRestController : IRestController<string>
+    internal class StringsRestController : IRestController<string>
     {
-        private readonly ICollection<string> _collection = new HashSet<string>();  
+        private readonly ICollection<string> _collection = new HashSet<string>();
 
         public Task<IEnumerable<string>> Get(IHttpRequest request)
         {
@@ -16,7 +16,7 @@ namespace uhttpsharpdemo
         }
         public Task<string> GetItem(IHttpRequest request)
         {
-            var id = GetId(request);
+            string id = GetId(request);
 
             if (_collection.Contains(id))
             {
@@ -27,25 +27,28 @@ namespace uhttpsharpdemo
         }
         private static string GetId(IHttpRequest request)
         {
-            var id = request.RequestParameters[1];
+            string id = request.RequestParameters[1];
 
             return id;
         }
+        
         public Task<string> Create(IHttpRequest request)
         {
-            var id = GetId(request);
+            string id = GetId(request);
 
             _collection.Add(id);
 
             return Task.FromResult(id);
         }
+        
         public Task<string> Upsert(IHttpRequest request)
         {
             return Create(request);
         }
+        
         public Task<string> Delete(IHttpRequest request)
         {
-            var id = GetId(request);
+            string id = GetId(request);
 
             if (_collection.Remove(id))
             {
@@ -54,6 +57,7 @@ namespace uhttpsharpdemo
 
             throw GetNotFoundException();
         }
+        
         private static Exception GetNotFoundException()
         {
             return new HttpException(HttpResponseCode.NotFound, "The resource you've looked for is not found");

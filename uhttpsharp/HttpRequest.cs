@@ -26,73 +26,34 @@ namespace uhttpsharp
     [DebuggerDisplay("{Method} {OriginalUri,nq}")]
     internal class HttpRequest : IHttpRequest
     {
-        private readonly IHttpHeaders _headers;
-        private readonly HttpMethods _method;
-        private readonly string _protocol;
-        private readonly Uri _uri;
-        private readonly string[] _requestParameters;
-        private readonly IHttpHeaders _queryString;
-        private readonly IHttpPost _post;
-
-        public HttpRequest(IHttpHeaders headers, HttpMethods method, string protocol, Uri uri, string[] requestParameters, IHttpHeaders queryString, IHttpPost post)
+        public HttpRequest(IHttpHeaders headers, HttpMethods method, string protocol, Uri uri, string[] requestParameters,
+            IHttpHeaders queryString, IHttpPost post)
         {
-            _headers = headers;
-            _method = method;
-            _protocol = protocol;
-            _uri = uri;
-            _requestParameters = requestParameters;
-            _queryString = queryString;
-            _post = post;
+            Headers = headers;
+            Method = method;
+            Protocol = protocol;
+            Uri = uri;
+            RequestParameters = requestParameters;
+            QueryString = queryString;
+            Post = post;
         }
 
-        public IHttpHeaders Headers
-        {
-            get { return _headers; }
-        }
+        public IHttpHeaders Headers { get; }
 
-        public HttpMethods Method
-        {
-            get { return _method; }
-        }
+        public HttpMethods Method { get; }
 
-        public string Protocol
-        {
-            get { return _protocol; }
-        }
+        public string Protocol { get; }
 
-        public Uri Uri
-        {
-            get { return _uri; }
-        }
+        public Uri Uri { get; }
 
-        public string[] RequestParameters
-        {
-            get { return _requestParameters; }
-        }
+        public string[] RequestParameters { get; }
 
-        public IHttpPost Post
-        {
-            get { return _post; }
-        }
+        public IHttpPost Post { get; }
 
-        public IHttpHeaders QueryString
-        {
-            get { return _queryString; }
-        }
+        public IHttpHeaders QueryString { get; }
 
-        internal string OriginalUri
-        {
-            get
-            {
-                if (QueryString == null)
-                {
-                    return Uri.OriginalString;    
-                }
-
-                return Uri.OriginalString + "?" + QueryString.ToUriData();
-
-            }
-        }
+        internal string OriginalUri =>
+            QueryString == null ? Uri.OriginalString : $"{Uri.OriginalString}?{QueryString.ToUriData()}";
     }
 
     public interface IHttpRequest
@@ -107,19 +68,16 @@ namespace uhttpsharp
 
         string[] RequestParameters { get; }
 
-        IHttpPost Post {get;}
+        IHttpPost Post { get; }
 
         IHttpHeaders QueryString { get; }
-
     }
 
     public interface IHttpPost
     {
+        byte[] Raw { get; }
 
-        byte[] Raw {get;}
-
-        IHttpHeaders Parsed {get;}
-
+        IHttpHeaders Parsed { get; }
     }
 
     public sealed class HttpRequestParameters
@@ -130,13 +88,10 @@ namespace uhttpsharp
 
         public HttpRequestParameters(Uri uri)
         {
-            var url = uri.OriginalString;
+            string url = uri.OriginalString;
             _params = url.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        public IList<string> Params
-        {
-            get { return _params; }
-        }
+        public IList<string> Params => _params;
     }
 }

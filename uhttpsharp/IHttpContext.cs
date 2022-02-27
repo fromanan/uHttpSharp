@@ -33,21 +33,16 @@ namespace uhttpsharp
     public class CookiesStorage : ICookiesStorage
     {
         private static readonly string[] CookieSeparators = { "; ", "=" };
-        
+
         private readonly Dictionary<string, string> _values;
 
-        private bool _touched;
-
-        public bool Touched
-        {
-            get { return _touched; }
-        }
+        public bool Touched { get; private set; }
 
         public string ToCookieData()
         {
             StringBuilder builder = new StringBuilder();
 
-            foreach (var kvp in _values)
+            foreach (KeyValuePair<string, string> kvp in _values)
             {
                 builder.AppendFormat("Set-Cookie: {0}={1}{2}", kvp.Key, kvp.Value, Environment.NewLine);
             }
@@ -57,32 +52,30 @@ namespace uhttpsharp
 
         public CookiesStorage(string cookie)
         {
-            var keyValues = cookie.Split(CookieSeparators, StringSplitOptions.RemoveEmptyEntries);
+            string[] keyValues = cookie.Split(CookieSeparators, StringSplitOptions.RemoveEmptyEntries);
             _values = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             for (int i = 0; i < keyValues.Length; i += 2)
             {
-                var key = keyValues[i];
-                var value = keyValues[i + 1];
+                string key = keyValues[i];
+                string value = keyValues[i + 1];
 
                 _values[key] = value;
             }
         }
 
-
-
         public void Upsert(string key, string value)
         {
             _values[key] = value;
 
-            _touched = true;
+            Touched = true;
         }
 
         public void Remove(string key)
         {
             if (_values.Remove(key))
             {
-                _touched = true;
+                Touched = true;
             }
         }
 

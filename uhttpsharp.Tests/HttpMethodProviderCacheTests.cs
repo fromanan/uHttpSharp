@@ -17,8 +17,8 @@ namespace uhttpsharp.Tests
         public void Should_Call_Child_With_Right_Parameters()
         {
             // Arrange
-            var mock = Substitute.For<IHttpMethodProvider>();
-            var target = GetTarget(mock);
+            IHttpMethodProvider mock = Substitute.For<IHttpMethodProvider>();
+            IHttpMethodProvider target = GetTarget(mock);
 
             // Act
             target.Provide(MethodName);
@@ -33,13 +33,12 @@ namespace uhttpsharp.Tests
             // Arrange
             const HttpMethods expectedMethod = HttpMethods.Post;
 
-            var mock = Substitute.For<IHttpMethodProvider>();
+            IHttpMethodProvider mock = Substitute.For<IHttpMethodProvider>();
             mock.Provide(MethodName).Returns(expectedMethod);
-            var target = GetTarget(mock);
-
+            IHttpMethodProvider target = GetTarget(mock);
 
             // Act
-            var actual = target.Provide(MethodName);
+            HttpMethods actual = target.Provide(MethodName);
 
             // Assert
             actual.ShouldBe(expectedMethod);
@@ -49,8 +48,8 @@ namespace uhttpsharp.Tests
         public void Should_Cache_The_Value()
         {
             // Arrange
-            var mock = Substitute.For<IHttpMethodProvider>();
-            var target = GetTarget(mock);
+            IHttpMethodProvider mock = Substitute.For<IHttpMethodProvider>();
+            IHttpMethodProvider target = GetTarget(mock);
 
             // Act
             target.Provide(MethodName);
@@ -60,6 +59,5 @@ namespace uhttpsharp.Tests
             // Assert
             mock.Received(1).Provide(MethodName);
         }
-
     }
 }

@@ -5,7 +5,6 @@ namespace uhttpsharp.Clients
 {
     public interface IClient
     {
-
         Stream Stream { get; }
 
         bool Connected { get; }
@@ -13,8 +12,5 @@ namespace uhttpsharp.Clients
         void Close();
 
         EndPoint RemoteEndPoint { get; }
-
-
-
     }
 }

@@ -6,7 +6,6 @@ namespace uhttpsharp.Controllers
 {
     public interface IErrorContainer
     {
-
         void Log(string description);
 
         IEnumerable<string> Errors { get; }
@@ -14,6 +13,5 @@ namespace uhttpsharp.Controllers
         bool Any { get; }
 
         Task<IControllerResponse> GetResponse();
-
     }
 }

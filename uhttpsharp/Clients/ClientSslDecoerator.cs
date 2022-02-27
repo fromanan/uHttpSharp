@@ -24,30 +24,23 @@ namespace uhttpsharp.Clients
         public async Task AuthenticateAsServer()
         {
             Task timeout = Task.Delay(TimeSpan.FromSeconds(10));
-            if (timeout == await Task.WhenAny(_sslStream.AuthenticateAsServerAsync(_certificate, false, SslProtocols.Tls12, true), timeout).ConfigureAwait(false))
+            if (timeout == await Task
+                    .WhenAny(_sslStream.AuthenticateAsServerAsync(_certificate, false, SslProtocols.Tls12, true), timeout)
+                    .ConfigureAwait(false))
             {
                 throw new TimeoutException("SSL Authentication Timeout");
             }
         }
 
-        public Stream Stream
-        {
-            get { return _sslStream; }
-        }
+        public Stream Stream => _sslStream;
 
-        public bool Connected
-        {
-            get { return _child.Connected; }
-        }
+        public bool Connected => _child.Connected;
 
         public void Close()
         {
             _child.Close();
         }
 
-        public EndPoint RemoteEndPoint
-        {
-            get { return _child.RemoteEndPoint; }
-        }
+        public EndPoint RemoteEndPoint => _child.RemoteEndPoint;
     }
 }
