@@ -23,4 +23,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo f | xcopy /y &quot;$(TargetPath)&quot; &quot;C:\\Users\\%username%\\Downloads\\Builds&quot; /R /F /I" />
+  </Target>
 </Project>
