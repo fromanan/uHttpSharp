@@ -16,44 +16,41 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-using System.Text;
-using System.Net;
-using System.Reflection;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Sockets;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using NovaCore.Common;
 using uhttpsharp.Clients;
 using uhttpsharp.Headers;
 using uhttpsharp.RequestProviders;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp
 {
     internal sealed class HttpClientHandler
     {
         private const string CrLf = "\r\n";
-        private static readonly byte[] CrLfBuffer = Encoding.UTF8.GetBytes(CrLf);
+        private static readonly byte[] CrLfBuffer = Encoding.UTF8.GetBytes("\r\n");
+        private readonly Func<IHttpContext, Task> requestHandler;
+        private readonly IHttpRequestProvider requestProvider;
+        private readonly EndPoint remoteEndPoint;
+        private Stream stream;
+        private readonly Logger logger;
 
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
-        
-        private readonly IClient _client;
-        private readonly Func<IHttpContext, Task> _requestHandler;
-        private readonly IHttpRequestProvider _requestProvider;
-        private readonly EndPoint _remoteEndPoint;
-        private DateTime _lastOperationTime;
-        private Stream _stream;
-
-        public HttpClientHandler(IClient client, Func<IHttpContext, Task> requestHandler, IHttpRequestProvider requestProvider)
+        public HttpClientHandler(IClient client, Func<IHttpContext, Task> requestHandler,
+            IHttpRequestProvider requestProvider, Logger logger)
         {
-            _remoteEndPoint = client.RemoteEndPoint;
-            _client = client;
-            _requestHandler = requestHandler;
-            _requestProvider = requestProvider;
-            
-            Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+            remoteEndPoint = client.RemoteEndPoint;
+            Client = client;
+
+            this.requestHandler = requestHandler;
+            this.requestProvider = requestProvider;
+            this.logger = logger;
+
+            // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+            this.logger.Log($"Got Client {remoteEndPoint}");
 
             Task.Factory.StartNew(Process);
 
@@ -62,12 +59,12 @@ namespace uhttpsharp
 
         private async Task InitializeStream()
         {
-            if (Client is ClientSslDecorator)
+            if (Client is ClientSslDecorator client)
             {
-                await ((ClientSslDecorator)Client).AuthenticateAsServer().ConfigureAwait(false);
+                await client.AuthenticateAsServer().ConfigureAwait(false);
             }
 
-            _stream = new BufferedStream(_client.Stream, 8096);
+            stream = new BufferedStream(Client.Stream, 8096);
         }
 
         private async void Process()
@@ -76,36 +73,35 @@ namespace uhttpsharp
             {
                 await InitializeStream();
 
-                while (_client.Connected)
+                while (Client.Connected)
                 {
                     // TODO : Configuration.
-                    var limitedStream = new NotFlushingStream(new LimitedStream(_stream));
+                    NotFlushingStream limitedStream = new NotFlushingStream(new LimitedStream(stream));
 
-
-
-                    var request = await _requestProvider.Provide(new MyStreamReader(limitedStream)).ConfigureAwait(false);
+                    IHttpRequest request = await requestProvider
+                        .Provide(new MyStreamReader(limitedStream)).ConfigureAwait(false);
 
                     if (request != null)
                     {
                         UpdateLastOperationTime();
 
-                        var context = new HttpContext(request, _client.RemoteEndPoint);
+                        HttpContext context = new HttpContext(request, Client.RemoteEndPoint);
 
-                        Logger.InfoFormat("{1} : Got request {0}", request.Uri, _client.RemoteEndPoint);
+                        // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
+                        logger.Log($"{Client.RemoteEndPoint} : Got request {request.Uri}");
 
-
-                        await _requestHandler(context).ConfigureAwait(false);
+                        await requestHandler(context).ConfigureAwait(false);
 
                         if (context.Response != null)
                         {
-                            var streamWriter = new StreamWriter(limitedStream) { AutoFlush = false };
-                            streamWriter.NewLine = "\r\n";
+                            StreamWriter streamWriter = new StreamWriter(limitedStream) { AutoFlush = false };
+                            streamWriter.NewLine = CrLf;
                             await WriteResponse(context, streamWriter).ConfigureAwait(false);
                             await limitedStream.ExplicitFlushAsync().ConfigureAwait(false);
 
                             if (!request.Headers.KeepAliveConnection() || context.Response.CloseConnection)
                             {
-                                _client.Close();
+                                Client.Close();
                             }
                         }
 
@@ -113,85 +109,73 @@ namespace uhttpsharp
                     }
                     else
                     {
-                        _client.Close();
+                        Client.Close();
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                // Hate people who make bad calls.
-                Logger.WarnException(string.Format("Error while serving : {0}", _remoteEndPoint), e);
-                _client.Close();
+                logger.LogError($"Error while serving : {remoteEndPoint}");
+                logger.LogException(ex);
+                Client.Close();
             }
 
-            Logger.InfoFormat("Lost Client {0}", _remoteEndPoint);
+            // Logger.InfoFormat("Lost Client {0}", _remoteEndPoint);
+            logger.Log($"Lost Client {remoteEndPoint}");
         }
-        private async Task WriteResponse(HttpContext context, StreamWriter writer)
+
+        private static async Task WriteResponse(IHttpContext context, StreamWriter writer)
         {
             IHttpResponse response = context.Response;
             IHttpRequest request = context.Request;
-    
+
             // Headers
-            await writer.WriteLineAsync(string.Format("HTTP/1.1 {0} {1}",
-                (int)response.ResponseCode,
-                response.ResponseCode))
+            await writer.WriteLineAsync($"HTTP/1.1 {(int)response.ResponseCode} {response.ResponseCode}")
                 .ConfigureAwait(false);
-            
-            foreach (var header in response.Headers)
+
+            foreach (KeyValuePair<string, string> header in response.Headers)
             {
-                await writer.WriteLineAsync(string.Format("{0}: {1}", header.Key, header.Value)).ConfigureAwait(false);
+                await writer.WriteLineAsync($"{header.Key}: {header.Value}").ConfigureAwait(false);
             }
 
             // Cookies
             if (context.Cookies.Touched)
             {
-                await writer.WriteAsync(context.Cookies.ToCookieData())
-                    .ConfigureAwait(false);
+                await writer.WriteAsync(context.Cookies.ToCookieData()).ConfigureAwait(false);
             }
 
             // Empty Line
             await writer.WriteLineAsync().ConfigureAwait(false);
-            writer.Flush();
+            await writer.FlushAsync();
 
             // Body
             await response.WriteBody(writer).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
-            
         }
 
-        public IClient Client
-        {
-            get { return _client; }
-        }
+        public IClient Client { get; }
 
         public void ForceClose()
         {
-            _client.Close();
+            Client.Close();
         }
 
-        public DateTime LastOperationTime
-        {
-            get
-            {
-                return _lastOperationTime;
-            }
-        }
+        public DateTime LastOperationTime { get; private set; }
 
         private void UpdateLastOperationTime()
         {
-            // _lastOperationTime = DateTime.Now;
+            LastOperationTime = DateTime.Now;
         }
-
     }
 
     internal class NotFlushingStream : Stream
     {
         private readonly Stream _child;
+
         public NotFlushingStream(Stream child)
         {
             _child = child;
         }
-
 
         public void ExplicitFlush()
         {
@@ -212,10 +196,12 @@ namespace uhttpsharp
         {
             return _child.Seek(offset, origin);
         }
+
         public override void SetLength(long value)
         {
             _child.SetLength(value);
         }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             return _child.Read(buffer, offset, count);
@@ -225,51 +211,44 @@ namespace uhttpsharp
         {
             return _child.ReadByte();
         }
+
         public override void Write(byte[] buffer, int offset, int count)
         {
             _child.Write(buffer, offset, count);
         }
+
         public override void WriteByte(byte value)
         {
             _child.WriteByte(value);
         }
-        public override bool CanRead
-        {
-            get { return _child.CanRead; }
-        }
-        public override bool CanSeek
-        {
-            get { return _child.CanSeek; }
-        }
 
-        public override bool CanWrite
-        {
-            get { return _child.CanWrite; }
-        }
-        public override long Length
-        {
-            get { return _child.Length; }
-        }
+        public override bool CanRead => _child.CanRead;
+        public override bool CanSeek => _child.CanSeek;
+
+        public override bool CanWrite => _child.CanWrite;
+        public override long Length => _child.Length;
+
         public override long Position
         {
-            get { return _child.Position; }
-            set { _child.Position = value; }
+            get => _child.Position;
+            set => _child.Position = value;
         }
+
         public override int ReadTimeout
         {
-            get { return _child.ReadTimeout; }
-            set { _child.ReadTimeout = value; }
+            get => _child.ReadTimeout;
+            set => _child.ReadTimeout = value;
         }
+
         public override int WriteTimeout
         {
-            get { return _child.WriteTimeout; }
-            set { _child.WriteTimeout = value; }
+            get => _child.WriteTimeout;
+            set => _child.WriteTimeout = value;
         }
     }
 
     public static class RequestHandlersAggregateExtensions
     {
-
         public static Func<IHttpContext, Task> Aggregate(this IList<IHttpRequestHandler> handlers)
         {
             return handlers.Aggregate(0);
@@ -282,12 +261,10 @@ namespace uhttpsharp
                 return null;
             }
 
-            var currentHandler = handlers[index];
-            var nextHandler = handlers.Aggregate(index + 1);
-            
+            IHttpRequestHandler currentHandler = handlers[index];
+            Func<IHttpContext, Task> nextHandler = handlers.Aggregate(index + 1);
+
             return context => currentHandler.Handle(context, () => nextHandler(context));
         }
-
-
     }
 }
