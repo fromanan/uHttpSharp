@@ -18,76 +18,97 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using System.Threading.Tasks;
+using NovaCore.Common;
+using uhttpsharp.Clients;
 using uhttpsharp.Listeners;
 using uhttpsharp.RequestProviders;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp
 {
     public sealed class HttpServer : IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
+        private bool isActive;
 
-        private bool _isActive;
+        private readonly IList<IHttpRequestHandler> handlers = new List<IHttpRequestHandler>();
+        private readonly IList<IHttpListener> listeners = new List<IHttpListener>();
+        private readonly IHttpRequestProvider requestProvider;
+        private readonly IList<HttpClientHandler> clientHandlers = new List<HttpClientHandler>();
 
-        private readonly IList<IHttpRequestHandler> _handlers = new List<IHttpRequestHandler>();
-        private readonly IList<IHttpListener> _listeners = new List<IHttpListener>();
-        private readonly IHttpRequestProvider _requestProvider;
+        public readonly Logger Logger;
 
-
-        public HttpServer(IHttpRequestProvider requestProvider)
+        public HttpServer(IHttpRequestProvider requestProvider, Logger logger = null)
         {
-            _requestProvider = requestProvider;
+            this.requestProvider = requestProvider;
+            Logger = logger ?? new Logger();
         }
 
         public void Use(IHttpRequestHandler handler)
         {
-            _handlers.Add(handler);
+            handlers.Add(handler);
         }
 
         public void Use(IHttpListener listener)
         {
-            _listeners.Add(listener);
+            listeners.Add(listener);
         }
 
         public void Start()
         {
-            _isActive = true;
-
-            foreach (var listener in _listeners)
+            isActive = true;
+            foreach (IHttpListener listener in listeners)
             {
                 IHttpListener tempListener = listener;
-
                 Task.Factory.StartNew(() => Listen(tempListener));
             }
 
-            Logger.InfoFormat("Embedded uhttpserver started.");
+            // Logger.InfoFormat("Embedded uhttpserver started.");
+            Logger.LogInfo("Embedded uhttpserver started.");
         }
 
         private async void Listen(IHttpListener listener)
         {
-            var aggregatedHandler = _handlers.Aggregate();
-
-            while (_isActive)
+            Func<IHttpContext, Task> aggregatedHandler = handlers.Aggregate();
+            while (isActive)
             {
                 try
                 {
-                    new HttpClientHandler(await listener.GetClient().ConfigureAwait(false), aggregatedHandler, _requestProvider);
+                    IClient client = await listener.GetClient().ConfigureAwait(false);
+                    clientHandlers.Add(new HttpClientHandler(client, aggregatedHandler, requestProvider, Logger));
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    Logger.WarnException("Error while getting client", e);
+                    // Logger.WarnException("Error while getting client", e);
+                    Logger.LogError("Error while getting client");
+                    Logger.LogException(ex);
                 }
             }
 
-            Logger.InfoFormat("Embedded uhttpserver stopped.");
+            CloseAllConnections();
+
+            // Logger.InfoFormat("Embedded uhttpserver stopped.");
+            Logger.LogInfo("Embedded uhttpserver stopped.");
         }
 
         public void Dispose()
         {
-            _isActive = false;
+            CloseServer();
+        }
+
+        public void CloseServer()
+        {
+            isActive = false;
+        }
+
+        public bool Serving => !clientHandlers.Any(c => c.Client.Connected);
+
+        public void CloseAllConnections()
+        {
+            foreach (HttpClientHandler clientHandler in clientHandlers)
+            {
+                clientHandler?.ForceClose();
+            }
         }
     }
 }
