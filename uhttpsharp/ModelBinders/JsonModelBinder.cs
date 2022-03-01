@@ -8,11 +8,11 @@ namespace uhttpsharp.ModelBinders
 {
     public class JsonModelBinder : IModelBinder
     {
-        private readonly JsonSerializer _serializer;
+        private readonly JsonSerializer serializer;
 
         public JsonModelBinder(JsonSerializer serializer)
         {
-            _serializer = serializer;
+            this.serializer = serializer;
         }
 
         public JsonModelBinder() : this(JsonSerializer.CreateDefault()) { }
@@ -38,7 +38,7 @@ namespace uhttpsharp.ModelBinders
                 jToken = jToken.SelectToken(prefix);
             }
 
-            return jToken.ToObject<T>(_serializer);
+            return jToken.ToObject<T>(serializer);
         }
         
         public T Get<T>(IHttpHeaders headers)

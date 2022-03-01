@@ -10,21 +10,21 @@ namespace uhttpsharp.Handlers
 {
     public class SessionHandler<TSession> : IHttpRequestHandler
     {
-        private readonly Func<TSession> _sessionFactory;
-        private readonly TimeSpan _expiration;
+        private readonly Func<TSession> sessionFactory;
+        private readonly TimeSpan expiration;
 
-        private static readonly Random RandomGenerator = new Random();
+        private static readonly Random RandomGenerator = new();
 
         private class SessionHolder
         {
-            private readonly TSession _session;
+            private readonly TSession session;
 
             public TSession Session
             {
                 get
                 {
                     LastAccessTime = DateTime.Now;
-                    return _session;
+                    return session;
                 }
             }
 
@@ -32,43 +32,44 @@ namespace uhttpsharp.Handlers
 
             public SessionHolder(TSession session)
             {
-                _session = session;
+                this.session = session;
             }
         }
 
-        private readonly ConcurrentDictionary<string, SessionHolder> _sessions =
-            new ConcurrentDictionary<string, SessionHolder>();
+        private readonly ConcurrentDictionary<string, SessionHolder> sessions = new();
 
         public SessionHandler(Func<TSession> sessionFactory, TimeSpan expiration)
         {
-            _sessionFactory = sessionFactory;
-            _expiration = expiration;
+            this.sessionFactory = sessionFactory;
+            this.expiration = expiration;
         }
+
+        private const string SessionID = "SESSID";
 
         public Task Handle(IHttpContext context, Func<Task> next)
         {
-            if (!context.Cookies.TryGetByName("SESSID", out string sessId))
+            if (!context.Cookies.TryGetByName(SessionID, out string sessId))
             {
                 sessId = RandomGenerator.Next().ToString(CultureInfo.InvariantCulture);
-                context.Cookies.Upsert("SESSID", sessId);
+                context.Cookies.Upsert(SessionID, sessId);
             }
 
-            SessionHolder sessionHolder = _sessions.GetOrAdd(sessId, CreateSession);
+            SessionHolder sessionHolder = sessions.GetOrAdd(sessId, CreateSession);
 
-            if (DateTime.Now - sessionHolder.LastAccessTime > _expiration)
+            if (DateTime.Now - sessionHolder.LastAccessTime > expiration)
             {
                 sessionHolder = CreateSession(sessId);
-                _sessions.AddOrUpdate(sessId, sessionHolder, (sessionId, oldSession) => sessionHolder);
+                sessions.AddOrUpdate(sessId, sessionHolder, (sessionId, oldSession) => sessionHolder);
             }
 
             context.State.Session = sessionHolder.Session;
 
             return next();
         }
-        
+
         private SessionHolder CreateSession(string sessionId)
         {
-            return new SessionHolder(_sessionFactory());
+            return new SessionHolder(sessionFactory());
         }
     }
 }

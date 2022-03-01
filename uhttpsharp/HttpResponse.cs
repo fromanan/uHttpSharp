@@ -60,11 +60,11 @@ namespace uhttpsharp
 
     public sealed class StreamHttpResponse : HttpResponseBase
     {
-        private readonly Stream _body;
+        private readonly Stream body;
         
         public StreamHttpResponse(Stream body, HttpResponseCode code, IHttpHeaders headers) : base(code, headers)
         {
-            _body = body;
+            this.body = body;
         }
 
         public static IHttpResponse Create(Stream body, HttpResponseCode code = HttpResponseCode.Ok,
@@ -82,7 +82,7 @@ namespace uhttpsharp
         public override async Task WriteBody(StreamWriter writer)
         {
             await writer.FlushAsync().ConfigureAwait(false);
-            await _body.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
+            await body.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
             await writer.BaseStream.FlushAsync().ConfigureAwait(false);
         }
     }
@@ -110,11 +110,11 @@ namespace uhttpsharp
 
     public sealed class StringHttpResponse : HttpResponseBase
     {
-        private readonly string _body;
+        private readonly string body;
 
         public StringHttpResponse(string body, HttpResponseCode code, IHttpHeaders headers) : base(code, headers)
         {
-            _body = body;
+            this.body = body;
         }
 
         public static IHttpResponse Create(string body, HttpResponseCode code = HttpResponseCode.Ok,
@@ -138,7 +138,7 @@ namespace uhttpsharp
 
         public override async Task WriteBody(StreamWriter writer)
         {
-            await writer.WriteAsync(_body).ConfigureAwait(false);
+            await writer.WriteAsync(body).ConfigureAwait(false);
         }
     }
 
@@ -146,7 +146,7 @@ namespace uhttpsharp
     {
         private Stream ContentStream { get; set; }
 
-        private readonly Stream _headerStream = new MemoryStream();
+        private readonly Stream headerStream = new MemoryStream();
 
         public HttpResponse(HttpResponseCode code, string content, bool closeConnection)
             : this(code, "text/html; charset=utf-8", StringToStream(content), closeConnection)
@@ -197,8 +197,8 @@ namespace uhttpsharp
         }
         private static MemoryStream StringToStream(string content)
         {
-            MemoryStream stream = new MemoryStream();
-            StreamWriter writer = new StreamWriter(stream);
+            MemoryStream stream = new();
+            StreamWriter writer = new(stream);
             writer.Write(content);
             writer.Flush();
             return stream;
@@ -215,8 +215,8 @@ namespace uhttpsharp
 
         public async Task WriteHeaders(StreamWriter writer)
         {
-            _headerStream.Position = 0;
-            await _headerStream.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
+            headerStream.Position = 0;
+            await headerStream.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
         }
     }
 }

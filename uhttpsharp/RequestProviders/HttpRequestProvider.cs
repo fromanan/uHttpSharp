@@ -23,9 +23,9 @@ namespace uhttpsharp.RequestProviders
 
             string[] tokens =
             {
-                request.Substring(0, firstSpace),
+                request[..firstSpace],
                 request.Substring(firstSpace + 1, lastSpace - firstSpace - 1),
-                request.Substring(lastSpace + 1)
+                request[(lastSpace + 1)..]
             };
 
             if (tokens.Length != 3)
@@ -37,9 +37,9 @@ namespace uhttpsharp.RequestProviders
 
             string url = tokens[1];
             IHttpHeaders queryString = GetQueryStringData(ref url);
-            Uri uri = new Uri(url, UriKind.Relative);
+            Uri uri = new(url, UriKind.Relative);
 
-            List<KeyValuePair<string, string>> headersRaw = new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<string, string>> headersRaw = new();
 
             // get the headers
             string line;
@@ -71,8 +71,8 @@ namespace uhttpsharp.RequestProviders
             IHttpHeaders queryString;
             if (queryStringIndex != -1)
             {
-                queryString = new QueryStringHttpHeaders(url.Substring(queryStringIndex + 1));
-                url = url.Substring(0, queryStringIndex);
+                queryString = new QueryStringHttpHeaders(url[(queryStringIndex + 1)..]);
+                url = url[..queryStringIndex];
             }
             else
             {
@@ -100,7 +100,7 @@ namespace uhttpsharp.RequestProviders
         private static KeyValuePair<string, string> SplitHeader(string header)
         {
             int index = header.IndexOf(": ", StringComparison.InvariantCultureIgnoreCase);
-            return new KeyValuePair<string, string>(header.Substring(0, index), header.Substring(index + 2));
+            return new KeyValuePair<string, string>(header[..index], header[(index + 2)..]);
         }
     }
 }

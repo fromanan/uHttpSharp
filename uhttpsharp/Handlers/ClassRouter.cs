@@ -10,24 +10,23 @@ namespace uhttpsharp.Handlers
 {
     public class ClassRouter : IHttpRequestHandler
     {
-        private static readonly object SyncRoot = new object();
+        private static readonly object SyncRoot = new();
 
-        private static readonly HashSet<Type> LoadedRoutes = new HashSet<Type>();
+        private static readonly HashSet<Type> LoadedRoutes = new();
 
         private static readonly IDictionary<Tuple<Type, string>, Func<IHttpRequestHandler, IHttpRequestHandler>>
             Routers = new Dictionary<Tuple<Type, string>, Func<IHttpRequestHandler, IHttpRequestHandler>>();
 
         private static readonly ConcurrentDictionary<Type,
                 Func<IHttpContext, IHttpRequestHandler, string, Task<IHttpRequestHandler>>>
-            IndexerRouters =
-                new ConcurrentDictionary<Type, Func<IHttpContext, IHttpRequestHandler, string, Task<IHttpRequestHandler>>>();
+            IndexerRouters = new();
 
-        private readonly IHttpRequestHandler _root;
+        private readonly IHttpRequestHandler root;
 
         public ClassRouter(IHttpRequestHandler root)
         {
-            _root = root;
-            LoadRoute(_root);
+            this.root = root;
+            LoadRoute(this.root);
         }
 
         private void LoadRoute(IHttpRequestHandler root)
@@ -61,7 +60,7 @@ namespace uhttpsharp.Handlers
 
         public async Task Handle(IHttpContext context, Func<Task> next)
         {
-            IHttpRequestHandler handler = _root;
+            IHttpRequestHandler handler = root;
 
             foreach (string parameter in context.Request.RequestParameters)
             {

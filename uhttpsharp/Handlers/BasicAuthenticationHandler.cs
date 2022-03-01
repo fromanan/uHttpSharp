@@ -13,19 +13,19 @@ namespace uhttpsharp.Handlers
         private const string BasicPrefix = "Basic ";
         private static readonly int BasicPrefixLength = BasicPrefix.Length;
 
-        private readonly string _username;
-        private readonly string _password;
-        private readonly string _authenticationKey;
-        private readonly ListHttpHeaders _headers;
+        private readonly string username;
+        private readonly string password;
+        private readonly string authenticationKey;
+        private readonly ListHttpHeaders headers;
 
         public BasicAuthenticationHandler(string realm, string username, string password)
         {
-            _username = username;
-            _password = password;
-            _authenticationKey = $"Authenticated.{realm}";
-            _headers = new ListHttpHeaders(new List<KeyValuePair<string, string>>
+            this.username = username;
+            this.password = password;
+            authenticationKey = $"Authenticated.{realm}";
+            headers = new ListHttpHeaders(new List<KeyValuePair<string, string>>
             {
-                new KeyValuePair<string, string>("WWW-Authenticate", $@"Basic realm=""{realm}""")
+                new("WWW-Authenticate", $@"Basic realm=""{realm}""")
             });
         }
 
@@ -33,7 +33,7 @@ namespace uhttpsharp.Handlers
         {
             IDictionary<string, dynamic> session = context.State.Session;
 
-            if (session.TryGetValue(_authenticationKey, out dynamic ipAddress) && ipAddress == context.RemoteEndPoint)
+            if (session.TryGetValue(authenticationKey, out dynamic ipAddress) && ipAddress == context.RemoteEndPoint)
                 return next();
             
             if (TryAuthenticate(context, session))
@@ -41,7 +41,7 @@ namespace uhttpsharp.Handlers
                 return next();
             }
 
-            context.Response = StringHttpResponse.Create("Not Authenticated", HttpResponseCode.Unauthorized, headers: _headers);
+            context.Response = StringHttpResponse.Create("Not Authenticated", HttpResponseCode.Unauthorized, headers: headers);
 
             return Task.Factory.GetCompleted();
 
@@ -53,7 +53,7 @@ namespace uhttpsharp.Handlers
             
             if (!TryAuthenticate(credentials)) return false;
             
-            session[_authenticationKey] = context.RemoteEndPoint;
+            session[authenticationKey] = context.RemoteEndPoint;
             {
                 return true;
             }
@@ -66,15 +66,15 @@ namespace uhttpsharp.Handlers
                 return false;
             }
 
-            string basicCredentials = credentials.Substring(BasicPrefixLength);
+            string basicCredentials = credentials[BasicPrefixLength..];
 
             string usernameAndPassword = Encoding.UTF8.GetString(Convert.FromBase64String(basicCredentials));
             int index = usernameAndPassword.IndexOf(':');
             if (index == -1) return false;
-            string username = usernameAndPassword.Substring(0, index);
-            string password = usernameAndPassword.Substring(index + 1);
+            string username = usernameAndPassword[..index];
+            string password = usernameAndPassword[(index + 1)..];
 
-            return username == _username && password == _password;
+            return username == this.username && password == this.password;
         }
     }
 }

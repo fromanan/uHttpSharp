@@ -12,9 +12,9 @@ namespace uhttpsharp.Handlers
 
         public Task<IHttpResponse> Provide(object value, HttpResponseCode responseCode = HttpResponseCode.Ok)
         {
-            MemoryStream memoryStream = new MemoryStream();
-            JsonTextWriter writer = new JsonTextWriter(new StreamWriter(memoryStream));
-            JsonSerializer serializer = new JsonSerializer
+            MemoryStream memoryStream = new();
+            JsonTextWriter writer = new(new StreamWriter(memoryStream));
+            JsonSerializer serializer = new()
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore, 
                 Formatting = Formatting.Indented

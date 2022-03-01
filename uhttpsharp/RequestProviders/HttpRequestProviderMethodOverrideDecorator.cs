@@ -4,16 +4,16 @@ namespace uhttpsharp.RequestProviders
 {
     public class HttpRequestProviderMethodOverrideDecorator : IHttpRequestProvider
     {
-        private readonly IHttpRequestProvider _child;
+        private readonly IHttpRequestProvider child;
 
         public HttpRequestProviderMethodOverrideDecorator(IHttpRequestProvider child)
         {
-            _child = child;
+            this.child = child;
         }
 
         public async Task<IHttpRequest> Provide(IStreamReader streamReader)
         {
-            IHttpRequest childValue = await _child.Provide(streamReader).ConfigureAwait(false);
+            IHttpRequest childValue = await child.Provide(streamReader).ConfigureAwait(false);
 
             if (childValue == null)
             {

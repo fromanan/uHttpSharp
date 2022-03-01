@@ -6,7 +6,7 @@ namespace uhttpsharp
 {
     internal class HttpContext : IHttpContext
     {
-        private readonly ExpandoObject state = new ExpandoObject();
+        private readonly ExpandoObject state = new();
         public HttpContext(IHttpRequest request, EndPoint remoteEndPoint)
         {
             Request = request;

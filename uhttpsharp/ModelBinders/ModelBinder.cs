@@ -8,11 +8,11 @@ namespace uhttpsharp.ModelBinders
 {
     public class ModelBinder : IModelBinder
     {
-        private readonly IObjectActivator _activator;
+        private readonly IObjectActivator activator;
 
         public ModelBinder(IObjectActivator activator)
         {
-            _activator = activator;
+            this.activator = activator;
         }
 
         public T Get<T>(byte[] raw, string prefix)
@@ -22,7 +22,7 @@ namespace uhttpsharp.ModelBinders
 
         public T Get<T>(IHttpHeaders headers)
         {
-            T retVal = _activator.Activate<T>(null);
+            T retVal = activator.Activate<T>(null);
 
             foreach (PropertyInfo prop in retVal.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
@@ -49,7 +49,7 @@ namespace uhttpsharp.ModelBinders
                 return headers.TryGetByName(prefix, out string value) ? Convert.ChangeType(value, type) : null;
             }
 
-            object retVal = _activator.Activate(type, null);
+            object retVal = activator.Activate(type, null);
 
             List<PropertyInfo> setValues =
                 retVal.GetType()

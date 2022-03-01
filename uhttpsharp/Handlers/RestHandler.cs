@@ -8,14 +8,14 @@ namespace uhttpsharp.Handlers
     {
         private readonly struct RestCall
         {
-            private readonly HttpMethods _method;
+            private readonly HttpMethods method;
             
-            private readonly bool _entryFull;
+            private readonly bool entryFull;
 
             public RestCall(HttpMethods method, bool entryFull)
             {
-                _method = method;
-                _entryFull = entryFull;
+                this.method = method;
+                this.entryFull = entryFull;
             }
 
             public static RestCall Create(HttpMethods method, bool entryFull)
@@ -25,7 +25,7 @@ namespace uhttpsharp.Handlers
 
             private bool Equals(RestCall other)
             {
-                return _method == other._method && _entryFull.Equals(other._entryFull);
+                return method == other.method && entryFull.Equals(other.entryFull);
             }
 
             public override bool Equals(object obj)
@@ -38,7 +38,7 @@ namespace uhttpsharp.Handlers
             {
                 unchecked
                 {
-                    return ((int)_method * 397) ^ _entryFull.GetHashCode();
+                    return ((int)method * 397) ^ entryFull.GetHashCode();
                 }
             }
         }
@@ -55,26 +55,26 @@ namespace uhttpsharp.Handlers
             RestCallHandlers.Add(RestCall.Create(HttpMethods.Delete, true), async (c, r) => await c.Delete(r));
         }
 
-        private readonly IRestController<T> _controller;
+        private readonly IRestController<T> controller;
         
-        private readonly IResponseProvider _responseProvider;
+        private readonly IResponseProvider responseProvider;
         
         public RestHandler(IRestController<T> controller, IResponseProvider responseProvider)
         {
-            _controller = controller;
-            _responseProvider = responseProvider;
+            this.controller = controller;
+            this.responseProvider = responseProvider;
         }
 
         public async Task Handle(IHttpContext httpContext, Func<Task> next)
         {
             IHttpRequest httpRequest = httpContext.Request;
 
-            RestCall call = new RestCall(httpRequest.Method, httpRequest.RequestParameters.Length > 1);
+            RestCall call = new(httpRequest.Method, httpRequest.RequestParameters.Length > 1);
 
             if (RestCallHandlers.TryGetValue(call, out Func<IRestController<T>, IHttpRequest, Task<object>> handler))
             {
-                object value = await handler(_controller, httpRequest).ConfigureAwait(false);
-                httpContext.Response = await _responseProvider.Provide(value);
+                object value = await handler(controller, httpRequest).ConfigureAwait(false);
+                httpContext.Response = await responseProvider.Provide(value);
 
                 return;
             }

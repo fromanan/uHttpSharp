@@ -9,13 +9,13 @@ namespace uhttpsharp.Headers
     [DebuggerTypeProxy(typeof(HttpHeadersDebuggerProxy))]
     internal class QueryStringHttpHeaders : IHttpHeaders
     {
-        private readonly HttpHeaders _child;
+        private readonly HttpHeaders child;
         private static readonly char[] Separators = { '&', '=' };
 
         public QueryStringHttpHeaders(string query)
         {
             string[] splitKeyValues = query.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
-            Dictionary<string, string> values = new Dictionary<string, string>(splitKeyValues.Length / 2,
+            Dictionary<string, string> values = new(splitKeyValues.Length / 2,
                 StringComparer.InvariantCultureIgnoreCase);
 
             for (int i = 0; i < splitKeyValues.Length; i += 2)
@@ -31,22 +31,22 @@ namespace uhttpsharp.Headers
             }
 
             Count = values.Count;
-            _child = new HttpHeaders(values);
+            child = new HttpHeaders(values);
         }
 
         public string GetByName(string name)
         {
-            return _child.GetByName(name);
+            return child.GetByName(name);
         }
         
         public bool TryGetByName(string name, out string value)
         {
-            return _child.TryGetByName(name, out value);
+            return child.TryGetByName(name, out value);
         }
         
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
-            return _child.GetEnumerator();
+            return child.GetEnumerator();
         }
         
         IEnumerator IEnumerable.GetEnumerator()

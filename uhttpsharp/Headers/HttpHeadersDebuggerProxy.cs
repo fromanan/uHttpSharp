@@ -6,31 +6,31 @@ namespace uhttpsharp.Headers
 {
     internal class HttpHeadersDebuggerProxy
     {
-        private readonly IHttpHeaders _real;
+        private readonly IHttpHeaders real;
 
         [DebuggerDisplay("{Value,nq}", Name = "{Key,nq}")]
         internal class HttpHeader
         {
-            private readonly KeyValuePair<string, string> _header;
+            private readonly KeyValuePair<string, string> header;
             public HttpHeader(KeyValuePair<string, string> header)
             {
-                _header = header;
+                this.header = header;
             }
 
-            public string Value => _header.Value;
+            public string Value => header.Value;
 
-            public string Key => _header.Key;
+            public string Key => header.Key;
         }
 
         public HttpHeadersDebuggerProxy(IHttpHeaders real)
         {
-            _real = real;
+            this.real = real;
         }
 
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public HttpHeader[] Headers
         {
-            get { return _real.Select(kvp => new HttpHeader(kvp)).ToArray(); }
+            get { return real.Select(kvp => new HttpHeader(kvp)).ToArray(); }
         }
     }
 }

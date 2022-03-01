@@ -76,7 +76,7 @@ namespace uhttpsharp
                 while (Client.Connected)
                 {
                     // TODO : Configuration.
-                    NotFlushingStream limitedStream = new NotFlushingStream(new LimitedStream(stream));
+                    NotFlushingStream limitedStream = new(new LimitedStream(stream));
 
                     IHttpRequest request = await requestProvider
                         .Provide(new MyStreamReader(limitedStream)).ConfigureAwait(false);
@@ -85,7 +85,7 @@ namespace uhttpsharp
                     {
                         UpdateLastOperationTime();
 
-                        HttpContext context = new HttpContext(request, Client.RemoteEndPoint);
+                        HttpContext context = new(request, Client.RemoteEndPoint);
 
                         // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
                         logger.Log($"{Client.RemoteEndPoint} : Got request {request.Uri}");
@@ -94,7 +94,7 @@ namespace uhttpsharp
 
                         if (context.Response != null)
                         {
-                            StreamWriter streamWriter = new StreamWriter(limitedStream) { AutoFlush = false };
+                            StreamWriter streamWriter = new(limitedStream) { AutoFlush = false };
                             streamWriter.NewLine = CrLf;
                             await WriteResponse(context, streamWriter).ConfigureAwait(false);
                             await limitedStream.ExplicitFlushAsync().ConfigureAwait(false);
@@ -133,9 +133,9 @@ namespace uhttpsharp
             await writer.WriteLineAsync($"HTTP/1.1 {(int)response.ResponseCode} {response.ResponseCode}")
                 .ConfigureAwait(false);
 
-            foreach (KeyValuePair<string, string> header in response.Headers)
+            foreach ((string key, string value) in response.Headers)
             {
-                await writer.WriteLineAsync($"{header.Key}: {header.Value}").ConfigureAwait(false);
+                await writer.WriteLineAsync($"{key}: {value}").ConfigureAwait(false);
             }
 
             // Cookies
@@ -170,21 +170,21 @@ namespace uhttpsharp
 
     internal class NotFlushingStream : Stream
     {
-        private readonly Stream _child;
+        private readonly Stream child;
 
         public NotFlushingStream(Stream child)
         {
-            _child = child;
+            this.child = child;
         }
 
         public void ExplicitFlush()
         {
-            _child.Flush();
+            child.Flush();
         }
 
         public Task ExplicitFlushAsync()
         {
-            return _child.FlushAsync();
+            return child.FlushAsync();
         }
 
         public override void Flush()
@@ -194,56 +194,56 @@ namespace uhttpsharp
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            return _child.Seek(offset, origin);
+            return child.Seek(offset, origin);
         }
 
         public override void SetLength(long value)
         {
-            _child.SetLength(value);
+            child.SetLength(value);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            return _child.Read(buffer, offset, count);
+            return child.Read(buffer, offset, count);
         }
 
         public override int ReadByte()
         {
-            return _child.ReadByte();
+            return child.ReadByte();
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            _child.Write(buffer, offset, count);
+            child.Write(buffer, offset, count);
         }
 
         public override void WriteByte(byte value)
         {
-            _child.WriteByte(value);
+            child.WriteByte(value);
         }
 
-        public override bool CanRead => _child.CanRead;
-        public override bool CanSeek => _child.CanSeek;
+        public override bool CanRead => child.CanRead;
+        public override bool CanSeek => child.CanSeek;
 
-        public override bool CanWrite => _child.CanWrite;
-        public override long Length => _child.Length;
+        public override bool CanWrite => child.CanWrite;
+        public override long Length => child.Length;
 
         public override long Position
         {
-            get => _child.Position;
-            set => _child.Position = value;
+            get => child.Position;
+            set => child.Position = value;
         }
 
         public override int ReadTimeout
         {
-            get => _child.ReadTimeout;
-            set => _child.ReadTimeout = value;
+            get => child.ReadTimeout;
+            set => child.ReadTimeout = value;
         }
 
         public override int WriteTimeout
         {
-            get => _child.WriteTimeout;
-            set => _child.WriteTimeout = value;
+            get => child.WriteTimeout;
+            set => child.WriteTimeout = value;
         }
     }
 

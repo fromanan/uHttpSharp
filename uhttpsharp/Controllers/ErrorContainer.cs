@@ -6,20 +6,20 @@ namespace uhttpsharp.Controllers
 {
     public class ErrorContainer : IErrorContainer
     {
-        private readonly IList<string> _errors = new List<string>();
+        private readonly IList<string> errors = new List<string>();
 
         public void Log(string description)
         {
-            _errors.Add(description);
+            errors.Add(description);
         }
 
-        public IEnumerable<string> Errors => _errors;
-        public bool Any => _errors.Count != 0;
+        public IEnumerable<string> Errors => errors;
+        public bool Any => errors.Count != 0;
         public Task<IControllerResponse> GetResponse()
         {
             return
                 Task.FromResult<IControllerResponse>(new RenderResponse(HttpResponseCode.MethodNotAllowed,
-                    new { Message = string.Join(", ", _errors) }));
+                    new { Message = string.Join(", ", errors) }));
         }
     }
 }

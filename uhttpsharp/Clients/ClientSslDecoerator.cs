@@ -10,37 +10,37 @@ namespace uhttpsharp.Clients
 {
     public class ClientSslDecorator : IClient
     {
-        private readonly IClient _child;
-        private readonly X509Certificate _certificate;
-        private readonly SslStream _sslStream;
+        private readonly IClient child;
+        private readonly X509Certificate certificate;
+        private readonly SslStream sslStream;
 
         public ClientSslDecorator(IClient child, X509Certificate certificate)
         {
-            _child = child;
-            _certificate = certificate;
-            _sslStream = new SslStream(_child.Stream);
+            this.child = child;
+            this.certificate = certificate;
+            sslStream = new SslStream(this.child.Stream);
         }
 
         public async Task AuthenticateAsServer()
         {
             Task timeout = Task.Delay(TimeSpan.FromSeconds(10));
             if (timeout == await Task
-                    .WhenAny(_sslStream.AuthenticateAsServerAsync(_certificate, false, SslProtocols.Tls12, true), timeout)
+                    .WhenAny(sslStream.AuthenticateAsServerAsync(certificate, false, SslProtocols.Tls12, true), timeout)
                     .ConfigureAwait(false))
             {
                 throw new TimeoutException("SSL Authentication Timeout");
             }
         }
 
-        public Stream Stream => _sslStream;
+        public Stream Stream => sslStream;
 
-        public bool Connected => _child.Connected;
+        public bool Connected => child.Connected;
 
         public void Close()
         {
-            _child.Close();
+            child.Close();
         }
 
-        public EndPoint RemoteEndPoint => _child.RemoteEndPoint;
+        public EndPoint RemoteEndPoint => child.RemoteEndPoint;
     }
 }

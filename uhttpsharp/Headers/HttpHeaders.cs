@@ -11,14 +11,14 @@ namespace uhttpsharp.Headers
 {
     internal class EmptyHttpPost : IHttpPost
     {
-        private static readonly byte[] _emptyBytes = Array.Empty<byte>();
+        private static readonly byte[] EmptyBytes = Array.Empty<byte>();
 
         public static readonly IHttpPost Empty = new EmptyHttpPost();
 
         private EmptyHttpPost() { }
 
         #region IHttpPost implementation
-        public byte[] Raw => _emptyBytes;
+        public byte[] Raw => EmptyBytes;
 
         public IHttpHeaders Parsed => EmptyHttpHeaders.Empty;
         #endregion
@@ -32,21 +32,21 @@ namespace uhttpsharp.Headers
             return new HttpPost(raw, postContentLength);
         }
 
-        private readonly int _readBytes;
+        private readonly int readBytes;
 
-        private readonly Lazy<IHttpHeaders> _parsed;
+        private readonly Lazy<IHttpHeaders> parsed;
 
         public HttpPost(byte[] raw, int readBytes)
         {
             Raw = raw;
-            _readBytes = readBytes;
-            _parsed = new Lazy<IHttpHeaders>(Parse);
+            this.readBytes = readBytes;
+            parsed = new Lazy<IHttpHeaders>(Parse);
         }
 
         private IHttpHeaders Parse()
         {
-            string body = Encoding.UTF8.GetString(Raw, 0, _readBytes);
-            QueryStringHttpHeaders parsed = new QueryStringHttpHeaders(body);
+            string body = Encoding.UTF8.GetString(Raw, 0, readBytes);
+            QueryStringHttpHeaders parsed = new(body);
 
             return parsed;
         }
@@ -54,7 +54,7 @@ namespace uhttpsharp.Headers
         #region IHttpPost implementation
         public byte[] Raw { get; }
 
-        public IHttpHeaders Parsed => _parsed.Value;
+        public IHttpHeaders Parsed => parsed.Value;
         #endregion
     }
 
@@ -62,22 +62,22 @@ namespace uhttpsharp.Headers
     [DebuggerTypeProxy(typeof(HttpHeadersDebuggerProxy))]
     public class ListHttpHeaders : IHttpHeaders
     {
-        private readonly IList<KeyValuePair<string, string>> _values;
+        private readonly IList<KeyValuePair<string, string>> values;
         
         public ListHttpHeaders(IList<KeyValuePair<string, string>> values)
         {
-            _values = values;
+            this.values = values;
         }
 
         public string GetByName(string name)
         {
-            return _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+            return values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                 .Select(kvp => kvp.Value).First();
         }
 
         public bool TryGetByName(string name, out string value)
         {
-            value = _values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+            value = values.Where(kvp => kvp.Key.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                 .Select(kvp => kvp.Value).FirstOrDefault();
 
             return value != default;
@@ -85,7 +85,7 @@ namespace uhttpsharp.Headers
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
-            return _values.GetEnumerator();
+            return values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -93,33 +93,33 @@ namespace uhttpsharp.Headers
             return GetEnumerator();
         }
 
-        internal int Count => _values.Count;
+        internal int Count => values.Count;
     }
 
     [DebuggerDisplay("{Count} Headers")]
     [DebuggerTypeProxy(typeof(HttpHeadersDebuggerProxy))]
     public class HttpHeaders : IHttpHeaders
     {
-        private readonly IDictionary<string, string> _values;
+        private readonly IDictionary<string, string> values;
 
         public HttpHeaders(IDictionary<string, string> values)
         {
-            _values = values;
+            this.values = values;
         }
 
         public string GetByName(string name)
         {
-            return _values[name];
+            return values[name];
         }
         
         public bool TryGetByName(string name, out string value)
         {
-            return _values.TryGetValue(name, out value);
+            return values.TryGetValue(name, out value);
         }
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
-            return _values.GetEnumerator();
+            return values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -127,6 +127,6 @@ namespace uhttpsharp.Headers
             return GetEnumerator();
         }
 
-        internal int Count => _values.Count;
+        internal int Count => values.Count;
     }
 }

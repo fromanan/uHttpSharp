@@ -17,21 +17,21 @@ namespace uhttpsharp.Headers
         private static readonly IEqualityComparer<KeyValuePair<string, string>> HeaderComparer =
             new KeyValueComparer<string, string, string>(k => k.Key, StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly IEnumerable<IHttpHeaders> _children;
+        private readonly IEnumerable<IHttpHeaders> children;
 
         public CompositeHttpHeaders(IEnumerable<IHttpHeaders> children)
         {
-            _children = children;
+            this.children = children;
         }
 
         public CompositeHttpHeaders(params IHttpHeaders[] children)
         {
-            _children = children;
+            this.children = children;
         }
 
         public string GetByName(string name)
         {
-            foreach (IHttpHeaders child in _children)
+            foreach (IHttpHeaders child in children)
             {
                 if (child.TryGetByName(name, out string value))
                 {
@@ -44,7 +44,7 @@ namespace uhttpsharp.Headers
 
         public bool TryGetByName(string name, out string value)
         {
-            foreach (IHttpHeaders child in _children)
+            foreach (IHttpHeaders child in children)
             {
                 if (child.TryGetByName(name, out value))
                 {
@@ -58,7 +58,7 @@ namespace uhttpsharp.Headers
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
-            return _children.SelectMany(c => c).Distinct(HeaderComparer).GetEnumerator();
+            return children.SelectMany(c => c).Distinct(HeaderComparer).GetEnumerator();
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
@@ -69,24 +69,24 @@ namespace uhttpsharp.Headers
 
     public class KeyValueComparer<TKey, TValue, TOutput> : IEqualityComparer<KeyValuePair<TKey, TValue>>
     {
-        private readonly Func<KeyValuePair<TKey, TValue>, TOutput> _outputFunc;
+        private readonly Func<KeyValuePair<TKey, TValue>, TOutput> outputFunc;
         
-        private readonly IEqualityComparer<TOutput> _outputComparer;
+        private readonly IEqualityComparer<TOutput> outputComparer;
         
         public KeyValueComparer(Func<KeyValuePair<TKey, TValue>, TOutput> outputFunc, IEqualityComparer<TOutput> outputComparer)
         {
-            _outputFunc = outputFunc;
-            _outputComparer = outputComparer;
+            this.outputFunc = outputFunc;
+            this.outputComparer = outputComparer;
         }
 
         public bool Equals(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y)
         {
-            return _outputComparer.Equals(_outputFunc(x), _outputFunc(y));
+            return outputComparer.Equals(outputFunc(x), outputFunc(y));
         }
 
         public int GetHashCode(KeyValuePair<TKey, TValue> obj)
         {
-            return _outputComparer.GetHashCode(_outputFunc(obj));
+            return outputComparer.GetHashCode(outputFunc(obj));
         }
     }
 }

@@ -11,11 +11,11 @@ namespace uhttpsharp.Handlers.Compression
 {
     public class CompressedResponse : IHttpResponse
     {
-        private readonly MemoryStream _memoryStream;
+        private readonly MemoryStream memoryStream;
 
         public CompressedResponse(IHttpResponse child, MemoryStream memoryStream, string encoding)
         {
-            _memoryStream = memoryStream;
+            this.memoryStream = memoryStream;
 
             ResponseCode = child.ResponseCode;
             CloseConnection = child.CloseConnection;
@@ -33,9 +33,9 @@ namespace uhttpsharp.Handlers.Compression
 
         public static async Task<IHttpResponse> Create(string name, IHttpResponse child, Func<Stream, Stream> streamFactory)
         {
-            MemoryStream memoryStream = new MemoryStream();
-            using (Stream deflateStream = streamFactory(memoryStream))
-            using (StreamWriter deflateWriter = new StreamWriter(deflateStream))
+            MemoryStream memoryStream = new();
+            await using (Stream deflateStream = streamFactory(memoryStream))
+            await using (StreamWriter deflateWriter = new(deflateStream))
             {
                 await child.WriteBody(deflateWriter).ConfigureAwait(false);
                 await deflateWriter.FlushAsync().ConfigureAwait(false);
@@ -56,10 +56,10 @@ namespace uhttpsharp.Handlers.Compression
 
         public async Task WriteBody(StreamWriter writer)
         {
-            _memoryStream.Position = 0;
+            memoryStream.Position = 0;
 
             await writer.FlushAsync().ConfigureAwait(false);
-            await _memoryStream.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
+            await memoryStream.CopyToAsync(writer.BaseStream).ConfigureAwait(false);
         }
         
         public HttpResponseCode ResponseCode { get; }

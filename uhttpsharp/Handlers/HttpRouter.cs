@@ -24,11 +24,12 @@ namespace uhttpsharp.Handlers
 {
     public class HttpRouter : IHttpRequestHandler
     {
-        private readonly IDictionary<string, IHttpRequestHandler> _handlers = new Dictionary<string, IHttpRequestHandler>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly IDictionary<string, IHttpRequestHandler> handlers =
+            new Dictionary<string, IHttpRequestHandler>(StringComparer.InvariantCultureIgnoreCase);
 
         public HttpRouter With(string function, IHttpRequestHandler handler)
         {
-            _handlers.Add(function, handler);
+            handlers.Add(function, handler);
 
             return this;
         }
@@ -43,7 +44,9 @@ namespace uhttpsharp.Handlers
             }
 
             // If route not found, Call next.
-            return _handlers.TryGetValue(function, out IHttpRequestHandler value) ? value.Handle(context, nextHandler) : nextHandler();
+            return handlers.TryGetValue(function, out IHttpRequestHandler value)
+                ? value.Handle(context, nextHandler)
+                : nextHandler();
         }
     }
 }

@@ -6,13 +6,13 @@ namespace uhttpsharp.Clients
 {
     public class TcpClientAdapter : IClient
     {
-        private readonly TcpClient _client;
-        private readonly NetworkStream _stream;
+        private readonly TcpClient client;
+        private readonly NetworkStream stream;
 
         public TcpClientAdapter(TcpClient client)
         {
-            _client = client;
-            _stream = _client.GetStream();
+            this.client = client;
+            stream = this.client.GetStream();
 
             // The next lines are commented out because they caused exceptions, 
             // They have been added because .net doesn't allow me to wait for data (ReadAsyncBlock).
@@ -25,15 +25,15 @@ namespace uhttpsharp.Clients
             // _stream.ReadTimeout = 1000;
         }
 
-        public Stream Stream => _stream;
+        public Stream Stream => stream;
 
-        public bool Connected => _client.Connected;
+        public bool Connected => client.Connected;
 
         public void Close()
         {
-            _client.Close();
+            client.Close();
         }
 
-        public EndPoint RemoteEndPoint => _client.Client.RemoteEndPoint;
+        public EndPoint RemoteEndPoint => client.Client.RemoteEndPoint;
     }
 }

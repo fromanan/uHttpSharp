@@ -15,21 +15,21 @@ namespace uhttpsharp.RequestProviders
 
     internal class StreamReaderAdapter : IStreamReader
     {
-        private readonly StreamReader _reader;
+        private readonly StreamReader reader;
         public StreamReaderAdapter(StreamReader reader)
         {
-            _reader = reader;
+            this.reader = reader;
         }
 
         public async Task<string> ReadLine()
         {
-            return await _reader.ReadLineAsync().ConfigureAwait(false);
+            return await reader.ReadLineAsync().ConfigureAwait(false);
         }
         public async Task<byte[]> ReadBytes(int count)
         {
             char[] tempBuffer = new char[count];
 
-            await _reader.ReadBlockAsync(tempBuffer, 0, count).ConfigureAwait(false);
+            await reader.ReadBlockAsync(tempBuffer, 0, count).ConfigureAwait(false);
 
             byte[] retVal = new byte[count];
 
@@ -45,54 +45,54 @@ namespace uhttpsharp.RequestProviders
     internal class MyStreamReader : IStreamReader
     {
         private const int BufferSize = 8096 / 4;
-        private readonly Stream _underlyingStream;
+        private readonly Stream underlyingStream;
 
-        private readonly byte[] _middleBuffer = new byte[BufferSize];
-        private int _index;
-        private int _count;
+        private readonly byte[] middleBuffer = new byte[BufferSize];
+        private int index;
+        private int count;
 
         public MyStreamReader(Stream underlyingStream)
         {
-            _underlyingStream = underlyingStream;
+            this.underlyingStream = underlyingStream;
         }
 
         private async Task ReadBuffer()
         {
             do
             {
-                _count = await _underlyingStream.ReadAsync(_middleBuffer, 0, BufferSize).ConfigureAwait(false);
+                count = await underlyingStream.ReadAsync(middleBuffer.AsMemory(0, BufferSize)).ConfigureAwait(false);
 
-                if (_count == 0)
+                if (count == 0)
                 {
                     // Fix for 100% CPU
                     await Task.Delay(100).ConfigureAwait(false);
                 }
-            } while (_count == 0);
+            } while (count == 0);
 
-            _index = 0;
+            index = 0;
         }
 
         public async Task<string> ReadLine()
         {
-            StringBuilder builder = new StringBuilder(64);
+            StringBuilder builder = new(64);
 
-            if (_index == _count)
+            if (index == count)
             {
                 await ReadBuffer().ConfigureAwait(false);
             }
 
-            byte readByte = _middleBuffer[_index++];
+            byte readByte = middleBuffer[index++];
 
-            while (readByte != '\n' && (builder.Length == 0 || builder[builder.Length - 1] != '\r'))
+            while (readByte != '\n' && (builder.Length == 0 || builder[^1] != '\r'))
             {
                 builder.Append((char)readByte);
 
-                if (_index == _count)
+                if (index == count)
                 {
                     await ReadBuffer().ConfigureAwait(false);
                 }
 
-                readByte = _middleBuffer[_index++];
+                readByte = middleBuffer[index++];
             }
 
             //Debug.WriteLine("Readline : " + sw.ElapsedMilliseconds);
@@ -106,18 +106,18 @@ namespace uhttpsharp.RequestProviders
             int currentByte = 0;
 
             // Empty the buffer
-            int bytesToRead = Math.Min(_count - _index, count) + _index;
-            for (int i = _index; i < bytesToRead; i++)
+            int bytesToRead = Math.Min(this.count - index, count) + index;
+            for (int i = index; i < bytesToRead; i++)
             {
-                buffer[currentByte++] = _middleBuffer[i];
+                buffer[currentByte++] = middleBuffer[i];
             }
 
-            _index = _count;
+            index = this.count;
 
             // Read from stream
             while (currentByte < count)
             {
-                currentByte += await _underlyingStream.ReadAsync(buffer, currentByte, count - currentByte)
+                currentByte += await underlyingStream.ReadAsync(buffer.AsMemory(currentByte, count - currentByte))
                     .ConfigureAwait(false);
             }
 

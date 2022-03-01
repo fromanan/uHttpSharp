@@ -12,14 +12,14 @@ namespace uhttpsharp.Controllers
 
     public class CustomResponse : IControllerResponse
     {
-        private readonly IHttpResponse _httpResponse;
+        private readonly IHttpResponse httpResponse;
         public CustomResponse(IHttpResponse httpResponse)
         {
-            _httpResponse = httpResponse;
+            this.httpResponse = httpResponse;
         }
         public Task<IHttpResponse> Respond(IHttpContext context, IView view)
         {
-            return Task.FromResult(_httpResponse);
+            return Task.FromResult(httpResponse);
         }
     }
 
@@ -44,18 +44,18 @@ namespace uhttpsharp.Controllers
 
     public class RedirectResponse : IControllerResponse
     {
-        private readonly Uri _newLocation;
+        private readonly Uri newLocation;
 
         public RedirectResponse(Uri newLocation)
         {
-            _newLocation = newLocation;
+            this.newLocation = newLocation;
         }
 
         public Task<IHttpResponse> Respond(IHttpContext context, IView view)
         {
             KeyValuePair<string, string>[] headers =
             {
-                new KeyValuePair<string, string>("Location", _newLocation.ToString())
+                new("Location", newLocation.ToString())
             };
             return Task.FromResult<IHttpResponse>(
                 new HttpResponse(HttpResponseCode.Found, string.Empty, headers, false));

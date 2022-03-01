@@ -37,11 +37,11 @@ namespace uhttpsharp.Headers
 
         public static string ToUriData(this IHttpHeaders headers)
         {
-            StringBuilder builder = new StringBuilder();
+            StringBuilder builder = new();
 
-            foreach (KeyValuePair<string, string> header in headers)
+            foreach ((string key, string value) in headers)
             {
-                builder.AppendFormat("{0}={1}&", Uri.EscapeDataString(header.Key), Uri.EscapeDataString(header.Value));
+                builder.AppendFormat("{0}={1}&", Uri.EscapeDataString(key), Uri.EscapeDataString(value));
             }
 
             return builder.ToString(0, builder.Length - 1);

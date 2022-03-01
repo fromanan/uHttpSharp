@@ -10,7 +10,7 @@ namespace uhttpsharp
 
         public HttpMethods Provide(string name)
         {
-            string capitalName = name.Substring(0, 1).ToUpper() + name.Substring(1).ToLower();
+            string capitalName = name[..1].ToUpper() + name.Substring(1).ToLower();
             return (HttpMethods)Enum.Parse(typeof(HttpMethods), capitalName);
         }
     }

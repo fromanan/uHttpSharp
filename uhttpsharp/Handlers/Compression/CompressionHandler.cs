@@ -16,7 +16,7 @@ namespace uhttpsharp.Handlers.Compression
     /// </summary>
     public class CompressionHandler : IHttpRequestHandler
     {
-        private readonly IEnumerable<ICompressor> _compressors;
+        private readonly IEnumerable<ICompressor> compressors;
         private static readonly char[] Separator = { ',' };
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace uhttpsharp.Handlers.Compression
         /// <param name="compressors">The compressors to use, Ordered by preference</param>
         public CompressionHandler(params ICompressor[] compressors)
         {
-            _compressors = compressors;
+            this.compressors = compressors;
         }
 
         public async Task Handle(IHttpContext context, Func<Task> next)
@@ -45,7 +45,7 @@ namespace uhttpsharp.Handlers.Compression
             string[] encodings = encodingNames.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
 
             ICompressor compressor =
-                _compressors.FirstOrDefault(c => encodings.Contains(c.Name, StringComparer.InvariantCultureIgnoreCase));
+                compressors.FirstOrDefault(c => encodings.Contains(c.Name, StringComparer.InvariantCultureIgnoreCase));
 
             if (compressor == null)
             {

@@ -6,21 +6,21 @@ namespace uhttpsharp.Listeners
 {
     public class TcpListenerAdapter : IHttpListener
     {
-        private readonly TcpListener _listener;
+        private readonly TcpListener listener;
 
         public TcpListenerAdapter(TcpListener listener)
         {
-            _listener = listener;
-            _listener.Start();
+            this.listener = listener;
+            this.listener.Start();
         }
         public async Task<IClient> GetClient()
         {
-            return new TcpClientAdapter(await _listener.AcceptTcpClientAsync().ConfigureAwait(false));
+            return new TcpClientAdapter(await listener.AcceptTcpClientAsync().ConfigureAwait(false));
         }
 
         public void Dispose()
         {
-            _listener.Stop();
+            listener.Stop();
         }
     }
 }

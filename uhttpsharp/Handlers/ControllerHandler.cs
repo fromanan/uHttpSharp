@@ -25,21 +25,21 @@ namespace uhttpsharp.Handlers
             }
 
             public Type ControllerType { get; }
-            
+
             public HttpMethods Method { get; }
 
             private bool Equals(ControllerMethod other)
             {
                 return ControllerType == other.ControllerType && Method == other.Method;
             }
-            
+
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 return obj is ControllerMethod method && Equals(method);
             }
-            
+
             public override int GetHashCode()
             {
                 unchecked
@@ -51,36 +51,37 @@ namespace uhttpsharp.Handlers
 
         private sealed class ControllerRoute
         {
-            private readonly Type _controllerType;
-            private readonly string _propertyName;
-            private readonly IEqualityComparer<string> _propertyNameComparer;
+            private readonly Type controllerType;
+            private readonly string propertyName;
+            private readonly IEqualityComparer<string> propertyNameComparer;
 
-            public ControllerRoute(Type controllerType, string propertyName, IEqualityComparer<string> propertyNameComparer)
+            public ControllerRoute(Type controllerType, string propertyName,
+                IEqualityComparer<string> propertyNameComparer)
             {
-                _controllerType = controllerType;
-                _propertyName = propertyName;
-                _propertyNameComparer = propertyNameComparer;
+                this.controllerType = controllerType;
+                this.propertyName = propertyName;
+                this.propertyNameComparer = propertyNameComparer;
             }
-            
+
             private bool Equals(ControllerRoute other)
             {
                 return other != null
-                       && _controllerType == other._controllerType
-                       && _propertyNameComparer.Equals(_propertyName, other._propertyName);
+                       && controllerType == other.controllerType
+                       && propertyNameComparer.Equals(propertyName, other.propertyName);
             }
-            
+
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 return ReferenceEquals(this, obj) || Equals(obj as ControllerRoute);
             }
-            
+
             public override int GetHashCode()
             {
                 unchecked
                 {
-                    return ((_controllerType != null ? _controllerType.GetHashCode() : 0) * 397) ^
-                           (_propertyName != null ? _propertyNameComparer.GetHashCode(_propertyName) : 0);
+                    return ((controllerType != null ? controllerType.GetHashCode() : 0) * 397) ^
+                           (propertyName != null ? propertyNameComparer.GetHashCode(propertyName) : 0);
                 }
             }
         }
@@ -91,34 +92,38 @@ namespace uhttpsharp.Handlers
         private static readonly IDictionary<ControllerRoute, Func<IController, IController>> Routes =
             new Dictionary<ControllerRoute, Func<IController, IController>>();
 
-        private static readonly IDictionary<Type, Func<IHttpContext, IController, string, Task<IController>>[]> IndexerRoutes =
-            new Dictionary<Type, Func<IHttpContext, IController, string, Task<IController>>[]>();
+        private static readonly IDictionary<Type, Func<IHttpContext, IController, string, Task<IController>>[]>
+            IndexerRoutes =
+                new Dictionary<Type, Func<IHttpContext, IController, string, Task<IController>>[]>();
 
         private static readonly ICollection<Type> LoadedControllerRoutes = new HashSet<Type>();
 
-        private static readonly object SyncRoot = new object();
+        private static readonly object SyncRoot = new();
 
         public delegate Task<IControllerResponse> ControllerFunction(IHttpContext context, IModelBinder binder,
             IController controller);
 
-        private readonly IController _controller;
-        
-        private readonly IView _view;
-        
-        private readonly IEqualityComparer<string> _propertyNameComparer;
+        private readonly IController controller;
+
+        private readonly IView view;
+
+        private readonly IEqualityComparer<string> propertyNameComparer;
 
         public ControllerHandler(IController controller, IModelBinder modelBinder, IView view)
-            : this(controller, modelBinder, view, StringComparer.CurrentCulture) { }
+            : this(controller, modelBinder, view, StringComparer.CurrentCulture)
+        {
+        }
 
         public ControllerHandler(IController controller, IModelBinder modelBinder, IView view,
             IEqualityComparer<string> propertyNameComparer)
         {
-            _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+            this.controller = controller ?? throw new ArgumentNullException(nameof(controller));
             ModelBinder = modelBinder ?? throw new ArgumentNullException(nameof(modelBinder));
-            _view = view ?? throw new ArgumentNullException(nameof(view));
-            _propertyNameComparer = propertyNameComparer ?? throw new ArgumentNullException(nameof(propertyNameComparer));
+            this.view = view ?? throw new ArgumentNullException(nameof(view));
+            this.propertyNameComparer =
+                propertyNameComparer ?? throw new ArgumentNullException(nameof(propertyNameComparer));
         }
-        
+
         protected virtual IModelBinder ModelBinder { get; }
 
         private static Func<IController, IController> GenerateRouteFunction(MethodInfo getter)
@@ -127,20 +132,20 @@ namespace uhttpsharp.Handlers
                 throw new ArgumentException("Cannot generate route function for static method.");
 
             ParameterExpression instance = Expression.Parameter(typeof(IController), "instance");
-            
+
             return Expression
                 .Lambda<Func<IController, IController>>(
                     Expression.Call(Expression.Convert(instance, getter.DeclaringType), getter), instance).Compile();
         }
-        
+
         private static void LoadRoutes(Type controllerType, IEqualityComparer<string> propertyNameComparer)
         {
             if (LoadedControllerRoutes.Contains(controllerType)) return;
-            
+
             lock (SyncRoot)
             {
                 if (LoadedControllerRoutes.Contains(controllerType)) return;
-                
+
                 foreach (PropertyInfo prop in controllerType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                              .Where(p => p.PropertyType == typeof(IController)))
                 {
@@ -149,10 +154,11 @@ namespace uhttpsharp.Handlers
                 }
 
                 // Indexers
-                List<MethodInfo> methods = controllerType.GetMethods().Where(m => Attribute.IsDefined(m, typeof(IndexerAttribute)))
-                    .OrderBy(m => m.GetCustomAttribute<IndexerAttribute>().Precedence).ToList();
+                List<MethodInfo> methods = controllerType.GetMethods()
+                    .Where(m => Attribute.IsDefined(m, typeof(IndexerAttribute)))
+                    .OrderBy(m => m.GetCustomAttribute<IndexerAttribute>()?.Precedence).ToList();
 
-                if (methods.Select(m => m.GetCustomAttribute<IndexerAttribute>().Precedence)
+                if (methods.Select(m => m.GetCustomAttribute<IndexerAttribute>()?.Precedence)
                     .GroupBy(c => c)
                     .Any(c => c.Count() > 1))
                 {
@@ -174,7 +180,8 @@ namespace uhttpsharp.Handlers
         public async Task Handle(IHttpContext context, Func<Task> next)
         {
             // I/O Bound?
-            IController controller = await GetController(context.Request.RequestParameters, context).ConfigureAwait(false);
+            IController controller =
+                await GetController(context.Request.RequestParameters, context).ConfigureAwait(false);
 
             if (controller == null)
             {
@@ -182,20 +189,21 @@ namespace uhttpsharp.Handlers
                 return;
             }
 
-            IControllerResponse response = await controller.Pipeline.Go(() => CallMethod(context, controller), context).ConfigureAwait(false);
-            context.Response = await response.Respond(context, _view).ConfigureAwait(false);
+            IControllerResponse response = await controller.Pipeline.Go(() => CallMethod(context, controller), context)
+                .ConfigureAwait(false);
+            context.Response = await response.Respond(context, view).ConfigureAwait(false);
         }
-        
+
         private async Task<IController> GetController(IEnumerable<string> requestParameters, IHttpContext context)
         {
-            IController current = _controller;
+            IController current = controller;
             foreach (string parameter in requestParameters)
             {
                 Type controllerType = current.GetType();
 
-                LoadRoutes(controllerType, _propertyNameComparer);
+                LoadRoutes(controllerType, propertyNameComparer);
 
-                ControllerRoute route = new ControllerRoute(controllerType, parameter, _propertyNameComparer);
+                ControllerRoute route = new(controllerType, parameter, propertyNameComparer);
 
                 if (Routes.TryGetValue(route, out Func<IController, IController> routeFunction))
                 {
@@ -205,7 +213,7 @@ namespace uhttpsharp.Handlers
 
                 // Try find indexer.
                 current = await TryGetIndexerValue(controllerType, context, current, parameter).ConfigureAwait(false);
-                
+
                 if (current != null)
                 {
                     continue;
@@ -217,18 +225,19 @@ namespace uhttpsharp.Handlers
             return current;
         }
 
-        private static async Task<IController> TryGetIndexerValue(Type controllerType, IHttpContext context, IController current,
+        private static async Task<IController> TryGetIndexerValue(Type controllerType, IHttpContext context,
+            IController current,
             string parameter)
         {
             if (!IndexerRoutes.TryGetValue(controllerType,
                     out Func<IHttpContext, IController, string, Task<IController>>[] indexerFunctions)) return null;
-            
+
             foreach (Func<IHttpContext, IController, string, Task<IController>> indexerFunction in indexerFunctions)
             {
                 Task<IController> returnedTask = indexerFunction(context, current, parameter);
 
                 if (returnedTask != null) return await returnedTask.ConfigureAwait(false);
-                
+
                 // TODO: Logger.Info
                 //Console.WriteLine("Returned task from indexer function was null. It may happen when we cannot convert from string to wanted type.");
             }
@@ -238,16 +247,17 @@ namespace uhttpsharp.Handlers
 
         private Task<IControllerResponse> CallMethod(IHttpContext context, IController controller)
         {
-            ControllerMethod controllerMethod = new ControllerMethod(controller.GetType(), context.Request.Method);
+            ControllerMethod controllerMethod = new(controller.GetType(), context.Request.Method);
 
             if (ControllerFunctions.TryGetValue(controllerMethod, out ControllerFunction controllerFunction))
                 return controllerFunction(context, ModelBinder, controller);
-            
+
             lock (SyncRoot)
             {
                 if (!ControllerFunctions.TryGetValue(controllerMethod, out controllerFunction))
                 {
-                    ControllerFunctions[controllerMethod] = controllerFunction = CreateControllerFunction(controllerMethod);
+                    ControllerFunctions[controllerMethod] =
+                        controllerFunction = CreateControllerFunction(controllerMethod);
                 }
             }
 
@@ -318,12 +328,13 @@ namespace uhttpsharp.Handlers
                 }
             }
 
-            MethodCallExpression methodCallExp = Expression.Call(Expression.Convert(controllerArgument, controllerMethod.ControllerType),
+            MethodCallExpression methodCallExp = Expression.Call(
+                Expression.Convert(controllerArgument, controllerMethod.ControllerType),
                 foundMethod, variables);
 
             LabelTarget labelTarget = Expression.Label(typeof(Task<IControllerResponse>));
 
-            Expression parameterBindingExpression = body.Count > 0 ? (Expression)Expression.Block(body) : Expression.Empty();
+            Expression parameterBindingExpression = body.Count > 0 ? Expression.Block(body) : Expression.Empty();
 
             BlockExpression methodBody = Expression.Block(
                 variables.Concat(new[] { errorContainerVariable }),
@@ -334,13 +345,16 @@ namespace uhttpsharp.Handlers
                 Expression.Label(labelTarget, Expression.Call(errorContainerVariable, "GetResponse", Type.EmptyTypes))
             );
 
-            ParameterExpression[] parameterExpressions = new[] { httpContextArgument, modelBinderArgument, controllerArgument };
-            Expression<ControllerFunction> lambda = Expression.Lambda<ControllerFunction>(methodBody, parameterExpressions);
+            ParameterExpression[] parameterExpressions =
+                { httpContextArgument, modelBinderArgument, controllerArgument };
+            Expression<ControllerFunction> lambda =
+                Expression.Lambda<ControllerFunction>(methodBody, parameterExpressions);
 
             return lambda.Compile();
         }
-        
-        private static Task<IControllerResponse> MethodNotFoundControllerFunction(IHttpContext context, IModelBinder binder,
+
+        private static Task<IControllerResponse> MethodNotFoundControllerFunction(IHttpContext context,
+            IModelBinder binder,
             object controller)
         {
             // TODO : MethodNotFound.
