@@ -10,28 +10,27 @@ namespace uhttpsharp.Headers
     internal class QueryStringHttpHeaders : IHttpHeaders
     {
         private readonly HttpHeaders _child;
-        private static readonly char[] Seperators = {'&', '='};
-
-        private readonly int _count;
+        private static readonly char[] Separators = { '&', '=' };
 
         public QueryStringHttpHeaders(string query)
         {
-            var splittedKeyValues = query.Split(Seperators, StringSplitOptions.RemoveEmptyEntries);
-            var values = new Dictionary<string, string>(splittedKeyValues.Length / 2, StringComparer.InvariantCultureIgnoreCase);
+            string[] splitKeyValues = query.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+            Dictionary<string, string> values = new Dictionary<string, string>(splitKeyValues.Length / 2,
+                StringComparer.InvariantCultureIgnoreCase);
 
-            for (int i = 0; i < splittedKeyValues.Length; i += 2)
+            for (int i = 0; i < splitKeyValues.Length; i += 2)
             {
-                var key = Uri.UnescapeDataString(splittedKeyValues[i]);
+                string key = Uri.UnescapeDataString(splitKeyValues[i]);
                 string value = null;
-                if (splittedKeyValues.Length > i + 1)
+                if (splitKeyValues.Length > i + 1)
                 {
-                    value = Uri.UnescapeDataString(splittedKeyValues[i + 1]).Replace('+', ' ');    
+                    value = Uri.UnescapeDataString(splitKeyValues[i + 1]).Replace('+', ' ');
                 }
-                
+
                 values[key] = value;
             }
 
-            _count = values.Count;
+            Count = values.Count;
             _child = new HttpHeaders(values);
         }
 
@@ -39,25 +38,22 @@ namespace uhttpsharp.Headers
         {
             return _child.GetByName(name);
         }
+        
         public bool TryGetByName(string name, out string value)
         {
             return _child.TryGetByName(name, out value);
         }
+        
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
             return _child.GetEnumerator();
         }
+        
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
         }
 
-        internal int Count
-        {
-            get
-            {
-                return _count;
-            }
-        }
+        internal int Count { get; }
     }
 }

@@ -15,17 +15,15 @@ namespace uhttpsharp.ModelBinders
             _serializer = serializer;
         }
 
-        public JsonModelBinder() : this(JsonSerializer.CreateDefault())
-        {
-            
-        }
+        public JsonModelBinder() : this(JsonSerializer.CreateDefault()) { }
+        
         public T Get<T>(byte[] raw, string prefix)
         {
-            var rawDecoded = Encoding.UTF8.GetString(raw);
+            string rawDecoded = Encoding.UTF8.GetString(raw);
 
             if (raw.Length == 0)
             {
-                return default(T);
+                return default;
             }
 
             if (prefix == null && typeof(T) == typeof(string))
@@ -33,7 +31,7 @@ namespace uhttpsharp.ModelBinders
                 return (T)(object)rawDecoded;
             }
 
-            var jToken = JToken.Parse(rawDecoded);
+            JToken jToken = JToken.Parse(rawDecoded);
 
             if (prefix != null)
             {
@@ -42,11 +40,13 @@ namespace uhttpsharp.ModelBinders
 
             return jToken.ToObject<T>(_serializer);
         }
-        public T Get<T>(IHttpHeaders headers) 
+        
+        public T Get<T>(IHttpHeaders headers)
         {
             throw new NotSupportedException();
         }
-        public T Get<T>(IHttpHeaders headers, string prefix) 
+        
+        public T Get<T>(IHttpHeaders headers, string prefix)
         {
             throw new NotSupportedException();
         }

@@ -5,15 +5,11 @@ namespace uhttpsharp.Attributes
     [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
     public class HttpMethodAttribute : Attribute
     {
-        private readonly HttpMethods _httpMethod;
         public HttpMethodAttribute(HttpMethods httpMethod)
         {
-            _httpMethod = httpMethod;
+            HttpMethod = httpMethod;
         }
 
-        public HttpMethods HttpMethod
-        {
-            get { return _httpMethod; }
-        }
+        public HttpMethods HttpMethod { get; }
     }
 }

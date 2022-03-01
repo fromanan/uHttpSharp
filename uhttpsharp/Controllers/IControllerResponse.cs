@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using uhttpsharp.Controllers;
+using uhttpsharp.Handlers;
 
-namespace uhttpsharp.Handlers
+namespace uhttpsharp.Controllers
 {
     public interface IControllerResponse
     {
@@ -25,44 +25,40 @@ namespace uhttpsharp.Handlers
 
     public class RenderResponse : IControllerResponse
     {
-        private readonly HttpResponseCode _code;
-        private readonly object _state;
         public RenderResponse(HttpResponseCode code, object state)
         {
-            _code = code;
-            _state = state;
+            Code = code;
+            State = state;
         }
-        public object State
-        {
-            get { return _state; }
-        }
-        public HttpResponseCode Code
-        {
-            get { return _code; }
-        }
+
+        public object State { get; }
+
+        public HttpResponseCode Code { get; }
+
         public async Task<IHttpResponse> Respond(IHttpContext context, IView view)
         {
-            var output = await view.Render(context, _state).ConfigureAwait(false);
-            return StringHttpResponse.Create(output.Body, _code, output.ContentType);
+            IViewResponse output = await view.Render(context, State).ConfigureAwait(false);
+            return StringHttpResponse.Create(output.Body, Code, output.ContentType);
         }
     }
 
     public class RedirectResponse : IControllerResponse
     {
         private readonly Uri _newLocation;
+
         public RedirectResponse(Uri newLocation)
         {
             _newLocation = newLocation;
         }
+
         public Task<IHttpResponse> Respond(IHttpContext context, IView view)
         {
-            var headers =
-                new[]
-                {
-                    new KeyValuePair<string, string>("Location", _newLocation.ToString())
-                };
+            KeyValuePair<string, string>[] headers =
+            {
+                new KeyValuePair<string, string>("Location", _newLocation.ToString())
+            };
             return Task.FromResult<IHttpResponse>(
-                new HttpResponse(HttpResponseCode.Found, String.Empty, headers,false));
+                new HttpResponse(HttpResponseCode.Found, string.Empty, headers, false));
         }
     }
 
@@ -77,14 +73,17 @@ namespace uhttpsharp.Handlers
         {
             return Create(new CustomResponse(httpResponse));
         }
+
         public static Task<IControllerResponse> Render(HttpResponseCode code, object state)
         {
             return Create(new RenderResponse(code, state));
         }
+
         public static Task<IControllerResponse> Render(HttpResponseCode code)
         {
             return Create(new RenderResponse(code, null));
         }
+
         public static Task<IControllerResponse> Redirect(Uri newLocation)
         {
             return Create(new RedirectResponse(newLocation));

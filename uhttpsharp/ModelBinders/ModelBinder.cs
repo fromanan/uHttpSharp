@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using uhttpsharp.Headers;
@@ -8,37 +9,34 @@ namespace uhttpsharp.ModelBinders
     public class ModelBinder : IModelBinder
     {
         private readonly IObjectActivator _activator;
+
         public ModelBinder(IObjectActivator activator)
         {
             _activator = activator;
         }
 
-
         public T Get<T>(byte[] raw, string prefix)
         {
             throw new NotSupportedException();
         }
+
         public T Get<T>(IHttpHeaders headers)
         {
-            var retVal = _activator.Activate<T>(null);
+            T retVal = _activator.Activate<T>(null);
 
-            foreach (var prop in retVal.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (PropertyInfo prop in retVal.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string))
                 {
-                    string stringValue;
-                    if (headers.TryGetByName(prop.Name, out stringValue))
-                    {
-                        var value = Convert.ChangeType(stringValue, prop.PropertyType);
-                        prop.SetValue(retVal, value);
-                    }
+                    if (!headers.TryGetByName(prop.Name, out string stringValue)) continue;
+                    object value = Convert.ChangeType(stringValue, prop.PropertyType);
+                    prop.SetValue(retVal, value);
                 }
                 else
                 {
-                    var value = Get(prop.PropertyType, headers, prop.Name);
+                    object value = Get(prop.PropertyType, headers, prop.Name);
                     prop.SetValue(retVal, value);
                 }
-
             }
 
             return retVal;
@@ -48,40 +46,29 @@ namespace uhttpsharp.ModelBinders
         {
             if (type.IsPrimitive || type == typeof(string))
             {
-                string value;
-                if (headers.TryGetByName(prefix, out value))
-                {
-                    return Convert.ChangeType(value, type);
-                }
-
-                return null;
+                return headers.TryGetByName(prefix, out string value) ? Convert.ChangeType(value, type) : null;
             }
 
-            var retVal = _activator.Activate(type, null);
+            object retVal = _activator.Activate(type, null);
 
-            string val;
-            var settedValues =
+            List<PropertyInfo> setValues =
                 retVal.GetType()
                     .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(p => headers.TryGetByName(prefix + "[" + p.Name + "]", out val)).ToList();
+                    .Where(p => headers.TryGetByName($"{prefix}[{p.Name}]", out string _)).ToList();
 
-            if (settedValues.Count == 0)
+            if (setValues.Count == 0)
             {
                 return null;
             }
 
-
-            foreach (var prop in settedValues)
+            foreach (PropertyInfo prop in setValues)
             {
-                string stringValue;
-                if (headers.TryGetByName(prefix + "[" + prop.Name + "]", out stringValue))
-                {
-                    object value = prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string)
-                        ? Convert.ChangeType(stringValue, prop.PropertyType)
-                        : Get(prop.PropertyType, headers, prefix + "[" + prop.Name + "]");
+                if (!headers.TryGetByName($"{prefix}[{prop.Name}]", out string stringValue)) continue;
+                object value = prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string)
+                    ? Convert.ChangeType(stringValue, prop.PropertyType)
+                    : Get(prop.PropertyType, headers, $"{prefix}[{prop.Name}]");
 
-                    prop.SetValue(retVal, value);
-                }
+                prop.SetValue(retVal, value);
             }
 
             return retVal;
@@ -95,7 +82,6 @@ namespace uhttpsharp.ModelBinders
 
     public class ObjectActivator : IObjectActivator
     {
-
         public object Activate(Type type, Func<string, Type, object> argumentGetter)
         {
             return Activator.CreateInstance(type);
@@ -104,14 +90,11 @@ namespace uhttpsharp.ModelBinders
 
     public interface IObjectActivator
     {
-
         object Activate(Type type, Func<string, Type, object> argumentGetter);
-
     }
 
     public static class ObjectActivatorExtensions
     {
-
         public static T Activate<T>(this IObjectActivator activator, Func<string, Type, object> argumentGetter)
         {
             return (T)activator.Activate(typeof(T), argumentGetter);

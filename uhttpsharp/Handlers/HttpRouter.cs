@@ -42,15 +42,8 @@ namespace uhttpsharp.Handlers
                 function = context.Request.RequestParameters[0];
             }
 
-            IHttpRequestHandler value;
-            if (_handlers.TryGetValue(function, out value))
-            {
-                return value.Handle(context, nextHandler);
-            }
-            
-
-            // Route not found, Call next.
-            return nextHandler();
+            // If route not found, Call next.
+            return _handlers.TryGetValue(function, out IHttpRequestHandler value) ? value.Handle(context, nextHandler) : nextHandler();
         }
     }
 }

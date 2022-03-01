@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using uhttpsharp.Headers;
-using uhttpsharp.Logging;
 
 namespace uhttpsharp.RequestProviders
 {
@@ -14,20 +10,18 @@ namespace uhttpsharp.RequestProviders
     {
         private static readonly char[] Separators = { '/' };
 
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
-        
         public async Task<IHttpRequest> Provide(IStreamReader reader)
         {
             // parse the http request
-            var request = await reader.ReadLine().ConfigureAwait(false);
+            string request = await reader.ReadLine().ConfigureAwait(false);
 
             if (request == null)
                 return null;
 
-            var firstSpace = request.IndexOf(' ');
-            var lastSpace = request.LastIndexOf(' ');
+            int firstSpace = request.IndexOf(' ');
+            int lastSpace = request.LastIndexOf(' ');
 
-            var tokens = new []
+            string[] tokens =
             {
                 request.Substring(0, firstSpace),
                 request.Substring(firstSpace + 1, lastSpace - firstSpace - 1),
@@ -39,42 +33,41 @@ namespace uhttpsharp.RequestProviders
                 return null;
             }
 
-            
-            var httpProtocol = tokens[2];
+            string httpProtocol = tokens[2];
 
-            var url = tokens[1];
-            var queryString = GetQueryStringData(ref url);
-            var uri = new Uri(url, UriKind.Relative);
+            string url = tokens[1];
+            IHttpHeaders queryString = GetQueryStringData(ref url);
+            Uri uri = new Uri(url, UriKind.Relative);
 
-            var headersRaw = new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<string, string>> headersRaw = new List<KeyValuePair<string, string>>();
 
             // get the headers
             string line;
 
             while (!string.IsNullOrEmpty((line = await reader.ReadLine().ConfigureAwait(false))))
             {
-                string currentLine = line;
-
-                var headerKvp = SplitHeader(currentLine);
+                KeyValuePair<string, string> headerKvp = SplitHeader(line);
                 headersRaw.Add(headerKvp);
             }
 
-            IHttpHeaders headers = new HttpHeaders(headersRaw.ToDictionary(k => k.Key, k => k.Value, StringComparer.InvariantCultureIgnoreCase));
+            IHttpHeaders headers =
+                new HttpHeaders(headersRaw.ToDictionary(k => k.Key, k => k.Value,
+                    StringComparer.InvariantCultureIgnoreCase));
             IHttpPost post = await GetPostData(reader, headers).ConfigureAwait(false);
 
-            string verb;
-            if (!headers.TryGetByName("_method", out verb))
+            if (!headers.TryGetByName("_method", out string verb))
             {
                 verb = tokens[0];
             }
-            var httpMethod = HttpMethodProvider.Default.Provide(verb);
+
+            HttpMethods httpMethod = HttpMethodProvider.Default.Provide(verb);
             return new HttpRequest(headers, httpMethod, httpProtocol, uri,
                 uri.OriginalString.Split(Separators, StringSplitOptions.RemoveEmptyEntries), queryString, post);
         }
 
         private static IHttpHeaders GetQueryStringData(ref string url)
         {
-            var queryStringIndex = url.IndexOf('?');
+            int queryStringIndex = url.IndexOf('?');
             IHttpHeaders queryString;
             if (queryStringIndex != -1)
             {
@@ -85,29 +78,29 @@ namespace uhttpsharp.RequestProviders
             {
                 queryString = EmptyHttpHeaders.Empty;
             }
+
             return queryString;
         }
 
         private static async Task<IHttpPost> GetPostData(IStreamReader streamReader, IHttpHeaders headers)
         {
-            int postContentLength;
             IHttpPost post;
-            if (headers.TryGetByName("content-length", out postContentLength) && postContentLength > 0)
+            if (headers.TryGetByName("content-length", out int postContentLength) && postContentLength > 0)
             {
-                post = await HttpPost.Create(streamReader, postContentLength, Logger).ConfigureAwait(false);
+                post = await HttpPost.Create(streamReader, postContentLength).ConfigureAwait(false);
             }
             else
             {
                 post = EmptyHttpPost.Empty;
             }
+
             return post;
         }
 
-        private KeyValuePair<string, string> SplitHeader(string header)
+        private static KeyValuePair<string, string> SplitHeader(string header)
         {
-            var index = header.IndexOf(": ", StringComparison.InvariantCultureIgnoreCase);
+            int index = header.IndexOf(": ", StringComparison.InvariantCultureIgnoreCase);
             return new KeyValuePair<string, string>(header.Substring(0, index), header.Substring(index + 2));
         }
-
     }
 }

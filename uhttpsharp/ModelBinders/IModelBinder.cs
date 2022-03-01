@@ -29,6 +29,5 @@ namespace uhttpsharp.ModelBinders
         /// <param name="prefix"></param>
         /// <returns></returns>
         T Get<T>(IHttpHeaders headers, string prefix);
-
     }
 }

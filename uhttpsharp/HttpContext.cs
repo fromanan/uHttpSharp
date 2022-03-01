@@ -6,37 +6,21 @@ namespace uhttpsharp
 {
     internal class HttpContext : IHttpContext
     {
-        private readonly IHttpRequest _request;
-        private readonly EndPoint _remoteEndPoint;
-        private readonly ICookiesStorage _cookies;
-        private readonly ExpandoObject _state = new ExpandoObject();
+        private readonly ExpandoObject state = new ExpandoObject();
         public HttpContext(IHttpRequest request, EndPoint remoteEndPoint)
         {
-            _request = request;
-            _remoteEndPoint = remoteEndPoint;
-            _cookies = new CookiesStorage(_request.Headers.GetByNameOrDefault("cookie", string.Empty));
+            Request = request;
+            RemoteEndPoint = remoteEndPoint;
+            Cookies = new CookiesStorage(Request.Headers.GetByNameOrDefault("cookie", string.Empty));
         }
 
-        public IHttpRequest Request
-        {
-            get { return _request; }
-        }
+        public IHttpRequest Request { get; }
 
         public IHttpResponse Response { get; set; }
 
-        public ICookiesStorage Cookies
-        {
-            get { return _cookies; }
-        }
+        public ICookiesStorage Cookies { get; }
 
-
-        public dynamic State
-        {
-            get { return _state; }
-        }
-        public EndPoint RemoteEndPoint
-        {
-            get { return _remoteEndPoint; }
-        }
+        public dynamic State => state;
+        public EndPoint RemoteEndPoint { get; }
     }
 }

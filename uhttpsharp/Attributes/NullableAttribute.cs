@@ -7,8 +7,5 @@ namespace uhttpsharp.Attributes
     /// as an argument that may be null.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
-    public class NullableAttribute : Attribute
-    {
-        
-    }
+    public class NullableAttribute : Attribute { }
 }

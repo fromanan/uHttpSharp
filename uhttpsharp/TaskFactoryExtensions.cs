@@ -10,6 +10,5 @@ namespace uhttpsharp
         {
             return CompletedTask;
         }
-
     }
 }

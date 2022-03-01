@@ -56,7 +56,7 @@ namespace uhttpsharp
         FailedDependency=424,
         UnorderedCollection=425,
         UpgradeRequired=426,
-        PrecondittionRequired=428,
+        PreconditionRequired=428,
         TooManyRequests=429,
         RequestHeaderFieldsTooLarge=431,
         LoginTimeout=440,

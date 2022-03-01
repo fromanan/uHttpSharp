@@ -18,24 +18,17 @@ namespace uhttpsharp.Handlers
         private class SessionHolder
         {
             private readonly TSession _session;
-            private DateTime _lastAccessTime = DateTime.Now;
 
             public TSession Session
             {
                 get
                 {
-                    _lastAccessTime = DateTime.Now;
+                    LastAccessTime = DateTime.Now;
                     return _session;
                 }
             }
 
-            public DateTime LastAccessTime
-            {
-                get
-                {
-                    return _lastAccessTime;
-                }
-            }
+            public DateTime LastAccessTime { get; private set; } = DateTime.Now;
 
             public SessionHolder(TSession session)
             {
@@ -43,7 +36,8 @@ namespace uhttpsharp.Handlers
             }
         }
 
-        private readonly ConcurrentDictionary<string, SessionHolder> _sessions = new ConcurrentDictionary<string, SessionHolder>();
+        private readonly ConcurrentDictionary<string, SessionHolder> _sessions =
+            new ConcurrentDictionary<string, SessionHolder>();
 
         public SessionHandler(Func<TSession> sessionFactory, TimeSpan expiration)
         {
@@ -53,15 +47,13 @@ namespace uhttpsharp.Handlers
 
         public Task Handle(IHttpContext context, Func<Task> next)
         {
-
-            string sessId;
-            if (!context.Cookies.TryGetByName("SESSID", out sessId))
+            if (!context.Cookies.TryGetByName("SESSID", out string sessId))
             {
                 sessId = RandomGenerator.Next().ToString(CultureInfo.InvariantCulture);
                 context.Cookies.Upsert("SESSID", sessId);
             }
 
-            var sessionHolder = _sessions.GetOrAdd(sessId, CreateSession);
+            SessionHolder sessionHolder = _sessions.GetOrAdd(sessId, CreateSession);
 
             if (DateTime.Now - sessionHolder.LastAccessTime > _expiration)
             {
@@ -73,6 +65,7 @@ namespace uhttpsharp.Handlers
 
             return next();
         }
+        
         private SessionHolder CreateSession(string sessionId)
         {
             return new SessionHolder(_sessionFactory());

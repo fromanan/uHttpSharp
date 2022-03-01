@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace uhttpsharp.Headers
@@ -7,48 +8,38 @@ namespace uhttpsharp.Headers
     {
         public static bool KeepAliveConnection(this IHttpHeaders headers)
         {
-            string value;
-            return headers.TryGetByName("connection", out value)
-                && value.Equals("Keep-Alive", StringComparison.InvariantCultureIgnoreCase);
+            return headers.TryGetByName("connection", out string value)
+                   && value.Equals("Keep-Alive", StringComparison.InvariantCultureIgnoreCase);
         }
 
         public static bool TryGetByName<T>(this IHttpHeaders headers, string name, out T value)
         {
-            string stringValue;
-            
-            if (headers.TryGetByName(name, out stringValue))
+            if (headers.TryGetByName(name, out string stringValue))
             {
-                value = (T) Convert.ChangeType(stringValue, typeof(T));
+                value = (T)Convert.ChangeType(stringValue, typeof(T));
                 return true;
             }
 
-            value = default(T);
+            value = default;
             return false;
         }
 
         public static T GetByName<T>(this IHttpHeaders headers, string name)
         {
-            T value;
-            headers.TryGetByName(name, out value);
+            headers.TryGetByName(name, out T value);
             return value;
         }
 
         public static T GetByNameOrDefault<T>(this IHttpHeaders headers, string name, T defaultValue)
         {
-            T value;
-            if (headers.TryGetByName(name, out value))
-            {
-                return value;
-            }
-
-            return defaultValue;
+            return headers.TryGetByName(name, out T value) ? value : defaultValue;
         }
 
         public static string ToUriData(this IHttpHeaders headers)
         {
-            var builder = new StringBuilder();
+            StringBuilder builder = new StringBuilder();
 
-            foreach (var header in headers)
+            foreach (KeyValuePair<string, string> header in headers)
             {
                 builder.AppendFormat("{0}={1}&", Uri.EscapeDataString(header.Key), Uri.EscapeDataString(header.Value));
             }

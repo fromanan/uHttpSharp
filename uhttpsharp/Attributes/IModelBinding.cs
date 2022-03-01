@@ -19,23 +19,19 @@ namespace uhttpsharp.Attributes
         public T Get<T>(IHttpContext context, IModelBinder binder)
         {
             // Expando object
-            var state = (context.State as IDictionary<string,object>);
-            object real;
-            if (state != null && state.TryGetValue(_propertyName, out real) && real is T)
+            if (context.State is IDictionary<string, object> state && state.TryGetValue(_propertyName, out object real) &&
+                real is T value)
             {
-                    return (T)real;
+                return value;
             }
 
-            return default(T);
+            return default;
         }
     }
 
     public class FromBodyAttribute : PrefixAttribute
     {
-        public FromBodyAttribute(string prefix = null) : base(prefix)
-        {
-            
-        }
+        public FromBodyAttribute(string prefix = null) : base(prefix) { }
 
         public override T Get<T>(IHttpContext context, IModelBinder binder)
         {
@@ -45,10 +41,8 @@ namespace uhttpsharp.Attributes
 
     public class FromPostAttribute : PrefixAttribute
     {
-        public FromPostAttribute(string prefix = null)
-            : base(prefix)
-        {
-        }
+        public FromPostAttribute(string prefix = null) : base(prefix) { }
+        
         public override T Get<T>(IHttpContext context, IModelBinder binder)
         {
             return binder.Get<T>(context.Request.Post.Parsed, Prefix);
@@ -57,10 +51,8 @@ namespace uhttpsharp.Attributes
 
     public class FromQueryAttribute : PrefixAttribute
     {
-        public FromQueryAttribute(string prefix)
-            : base(prefix)
-        {
-        }
+        public FromQueryAttribute(string prefix) : base(prefix) { }
+        
         public override T Get<T>(IHttpContext context, IModelBinder binder)
         {
             return binder.Get<T>(context.Request.QueryString, Prefix);
@@ -69,10 +61,7 @@ namespace uhttpsharp.Attributes
 
     public class FromHeadersAttribute : PrefixAttribute
     {
-        public FromHeadersAttribute(string prefix)
-            : base(prefix)
-        {
-        }
+        public FromHeadersAttribute(string prefix) : base(prefix) { }
 
         public override T Get<T>(IHttpContext context, IModelBinder binder)
         {
@@ -82,22 +71,14 @@ namespace uhttpsharp.Attributes
 
     public abstract class PrefixAttribute : Attribute, IModelBinding
     {
-        private readonly string _prefix;
-
         public PrefixAttribute(string prefix)
         {
-            _prefix = prefix;
+            Prefix = prefix;
         }
 
-        public bool HasPrefix
-        {
-            get { return !string.IsNullOrEmpty(_prefix); }
-        }
+        public bool HasPrefix => !string.IsNullOrEmpty(Prefix);
 
-        public string Prefix
-        {
-            get { return _prefix; }
-        }
+        public string Prefix { get; }
 
         public abstract T Get<T>(IHttpContext context, IModelBinder binder);
     }
