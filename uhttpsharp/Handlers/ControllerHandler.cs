@@ -230,8 +230,7 @@ namespace uhttpsharp.Handlers
                 if (returnedTask != null) return await returnedTask.ConfigureAwait(false);
                 
                 // TODO: Logger.Info
-                Console.WriteLine(
-                    "Returned task from indexer function was null. It may happen when we cannot convert from string to wanted type.");
+                //Console.WriteLine("Returned task from indexer function was null. It may happen when we cannot convert from string to wanted type.");
             }
 
             return null;

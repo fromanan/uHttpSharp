@@ -6,7 +6,7 @@ namespace uhttpsharp
 {
     internal class HttpContext : IHttpContext
     {
-        private readonly ExpandoObject _state = new ExpandoObject();
+        private readonly ExpandoObject state = new ExpandoObject();
         public HttpContext(IHttpRequest request, EndPoint remoteEndPoint)
         {
             Request = request;
@@ -20,7 +20,7 @@ namespace uhttpsharp
 
         public ICookiesStorage Cookies { get; }
 
-        public dynamic State => _state;
+        public dynamic State => state;
         public EndPoint RemoteEndPoint { get; }
     }
 }

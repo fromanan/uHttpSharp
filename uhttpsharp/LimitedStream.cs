@@ -12,8 +12,7 @@ namespace uhttpsharp
         public LoggingStream(Stream child)
         {
             _child = child;
-
-            Console.WriteLine($"Logging to {_tempFileName}");
+            //Console.WriteLine($"Logging to {_tempFileName}");
         }
 
         public override void Flush()

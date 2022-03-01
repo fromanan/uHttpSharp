@@ -21,7 +21,7 @@ namespace uhttpsharp.RequestProviders
             int firstSpace = request.IndexOf(' ');
             int lastSpace = request.LastIndexOf(' ');
 
-            string[] tokens = 
+            string[] tokens =
             {
                 request.Substring(0, firstSpace),
                 request.Substring(firstSpace + 1, lastSpace - firstSpace - 1),
@@ -51,7 +51,8 @@ namespace uhttpsharp.RequestProviders
             }
 
             IHttpHeaders headers =
-                new HttpHeaders(headersRaw.ToDictionary(k => k.Key, k => k.Value, StringComparer.InvariantCultureIgnoreCase));
+                new HttpHeaders(headersRaw.ToDictionary(k => k.Key, k => k.Value,
+                    StringComparer.InvariantCultureIgnoreCase));
             IHttpPost post = await GetPostData(reader, headers).ConfigureAwait(false);
 
             if (!headers.TryGetByName("_method", out string verb))

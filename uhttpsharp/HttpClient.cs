@@ -16,12 +16,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-using System.Text;
-using System.Net;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using NovaCore.Common;
 using uhttpsharp.Clients;
 using uhttpsharp.Headers;
 using uhttpsharp.RequestProviders;
@@ -31,23 +32,25 @@ namespace uhttpsharp
     internal sealed class HttpClientHandler
     {
         private const string CrLf = "\r\n";
-        private static readonly byte[] CrLfBuffer = Encoding.UTF8.GetBytes(CrLf);
+        private static readonly byte[] CrLfBuffer = Encoding.UTF8.GetBytes("\r\n");
+        private readonly Func<IHttpContext, Task> requestHandler;
+        private readonly IHttpRequestProvider requestProvider;
+        private readonly EndPoint remoteEndPoint;
+        private Stream stream;
+        private readonly Logger logger;
 
-        private readonly Func<IHttpContext, Task> _requestHandler;
-        private readonly IHttpRequestProvider _requestProvider;
-        private readonly EndPoint _remoteEndPoint;
-        private Stream _stream;
-
-        public HttpClientHandler(IClient client, Func<IHttpContext, Task> requestHandler, IHttpRequestProvider requestProvider)
+        public HttpClientHandler(IClient client, Func<IHttpContext, Task> requestHandler,
+            IHttpRequestProvider requestProvider, Logger logger)
         {
-            _remoteEndPoint = client.RemoteEndPoint;
+            remoteEndPoint = client.RemoteEndPoint;
             Client = client;
-            _requestHandler = requestHandler;
-            _requestProvider = requestProvider;
 
-            // TODO:
+            this.requestHandler = requestHandler;
+            this.requestProvider = requestProvider;
+            this.logger = logger;
+
             // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
-            Console.WriteLine($"Got Client {_remoteEndPoint}");
+            this.logger.Log($"Got Client {remoteEndPoint}");
 
             Task.Factory.StartNew(Process);
 
@@ -56,12 +59,12 @@ namespace uhttpsharp
 
         private async Task InitializeStream()
         {
-            if (Client is ClientSslDecorator decorator)
+            if (Client is ClientSslDecorator client)
             {
-                await decorator.AuthenticateAsServer().ConfigureAwait(false);
+                await client.AuthenticateAsServer().ConfigureAwait(false);
             }
 
-            _stream = new BufferedStream(Client.Stream, 8096);
+            stream = new BufferedStream(Client.Stream, 8096);
         }
 
         private async void Process()
@@ -73,9 +76,10 @@ namespace uhttpsharp
                 while (Client.Connected)
                 {
                     // TODO : Configuration.
-                    NotFlushingStream limitedStream = new NotFlushingStream(new LimitedStream(_stream));
+                    NotFlushingStream limitedStream = new NotFlushingStream(new LimitedStream(stream));
 
-                    IHttpRequest request = await _requestProvider.Provide(new MyStreamReader(limitedStream)).ConfigureAwait(false);
+                    IHttpRequest request = await requestProvider
+                        .Provide(new MyStreamReader(limitedStream)).ConfigureAwait(false);
 
                     if (request != null)
                     {
@@ -83,16 +87,15 @@ namespace uhttpsharp
 
                         HttpContext context = new HttpContext(request, Client.RemoteEndPoint);
 
-                        // TODO:
                         // Logger.InfoFormat("Got Client {0}", _remoteEndPoint);
-                        Console.WriteLine($"{Client.RemoteEndPoint} : Got request {request.Uri}");
+                        logger.Log($"{Client.RemoteEndPoint} : Got request {request.Uri}");
 
-                        await _requestHandler(context).ConfigureAwait(false);
+                        await requestHandler(context).ConfigureAwait(false);
 
                         if (context.Response != null)
                         {
                             StreamWriter streamWriter = new StreamWriter(limitedStream) { AutoFlush = false };
-                            streamWriter.NewLine = "\r\n";
+                            streamWriter.NewLine = CrLf;
                             await WriteResponse(context, streamWriter).ConfigureAwait(false);
                             await limitedStream.ExplicitFlushAsync().ConfigureAwait(false);
 
@@ -110,20 +113,17 @@ namespace uhttpsharp
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                // Hate people who make bad calls.
-                // TODO:
-                //Logger.WarnException($"Error while serving : {_remoteEndPoint}", e);
-                Console.WriteLine($"Error while serving : {_remoteEndPoint}");
-                Console.WriteLine(e.Message);
+                logger.LogError($"Error while serving : {remoteEndPoint}");
+                logger.LogException(ex);
                 Client.Close();
             }
 
-            // TODO:
             // Logger.InfoFormat("Lost Client {0}", _remoteEndPoint);
-            Console.WriteLine($"Lost Client {_remoteEndPoint}");
+            logger.Log($"Lost Client {remoteEndPoint}");
         }
+
         private static async Task WriteResponse(IHttpContext context, StreamWriter writer)
         {
             IHttpResponse response = context.Response;
@@ -160,17 +160,18 @@ namespace uhttpsharp
             Client.Close();
         }
 
-        public DateTime LastOperationTime { get; }
+        public DateTime LastOperationTime { get; private set; }
 
         private void UpdateLastOperationTime()
         {
-            // _lastOperationTime = DateTime.Now;
+            LastOperationTime = DateTime.Now;
         }
     }
 
     internal class NotFlushingStream : Stream
     {
         private readonly Stream _child;
+
         public NotFlushingStream(Stream child)
         {
             _child = child;
@@ -195,10 +196,12 @@ namespace uhttpsharp
         {
             return _child.Seek(offset, origin);
         }
+
         public override void SetLength(long value)
         {
             _child.SetLength(value);
         }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             return _child.Read(buffer, offset, count);
@@ -208,29 +211,35 @@ namespace uhttpsharp
         {
             return _child.ReadByte();
         }
+
         public override void Write(byte[] buffer, int offset, int count)
         {
             _child.Write(buffer, offset, count);
         }
+
         public override void WriteByte(byte value)
         {
             _child.WriteByte(value);
         }
+
         public override bool CanRead => _child.CanRead;
         public override bool CanSeek => _child.CanSeek;
 
         public override bool CanWrite => _child.CanWrite;
         public override long Length => _child.Length;
+
         public override long Position
         {
             get => _child.Position;
             set => _child.Position = value;
         }
+
         public override int ReadTimeout
         {
             get => _child.ReadTimeout;
             set => _child.ReadTimeout = value;
         }
+
         public override int WriteTimeout
         {
             get => _child.WriteTimeout;
