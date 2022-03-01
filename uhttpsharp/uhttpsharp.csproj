@@ -7,137 +7,19 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>uhttpsharp</RootNamespace>
     <AssemblyName>uhttpsharp</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <TargetFramework>net5.0-windows</TargetFramework>
     <LangVersion>9</LangVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\AssemblyCommon.cs">
-      <Link>Properties\AssemblyCommon.cs</Link>
-    </Compile>
-    <Compile Include="App_Packages\LibLog.3.1\LibLog.cs" />
-    <Compile Include="Attributes\IModelBinding.cs" />
-    <Compile Include="Attributes\HttpMethodAttribute.cs" />
-    <Compile Include="Clients\ClientSslDecoerator.cs" />
-    <Compile Include="Clients\IClient.cs" />
-    <Compile Include="Controllers\ErrorContainer.cs" />
-    <Compile Include="Controllers\IErrorContainer.cs" />
-    <Compile Include="Controllers\IRequestParameter.cs" />
-    <Compile Include="Attributes\NullableAttribute.cs" />
-    <Compile Include="Handlers\BasicAuthenticationHandler.cs" />
-    <Compile Include="Handlers\ClassRouter.cs" />
-    <Compile Include="Handlers\Compression\CompressionHandler.cs" />
-    <Compile Include="Handlers\ControllerHandler.cs" />
-    <Compile Include="Handlers\Compression\DeflateCompressor.cs" />
-    <Compile Include="Handlers\FileHandler.cs" />
-    <Compile Include="Controllers\IController.cs" />
-    <Compile Include="Controllers\IControllerResponse.cs" />
-    <Compile Include="Controllers\IPipeline.cs" />
-    <Compile Include="Handlers\Compression\GZipCompressor.cs" />
-    <Compile Include="Handlers\Compression\CompressedResponse.cs" />
-    <Compile Include="Handlers\Compression\ICompressor.cs" />
-    <Compile Include="Handlers\IResponseProvider.cs" />
-    <Compile Include="Handlers\IRestController.cs" />
-    <Compile Include="Handlers\IView.cs" />
-    <Compile Include="Handlers\JsonResponseProvider.cs" />
-    <Compile Include="Handlers\RestHandler.cs" />
-    <Compile Include="Handlers\SessionHandler.cs" />
-    <Compile Include="Headers\CompositeHttpHeaders.cs" />
-    <Compile Include="Headers\EmptyHttpHeaders.cs" />
-    <Compile Include="Headers\HttpHeaders.cs" />
-    <Compile Include="Headers\HttpHeadersDebuggerProxy.cs" />
-    <Compile Include="Headers\HttpHeadersExtensions.cs" />
-    <Compile Include="Headers\IHttpHeaders.cs" />
-    <Compile Include="Headers\QueryStringHttpHeaders.cs" />
-    <Compile Include="HttpClient.cs" />
-    <Compile Include="HttpContext.cs" />
-    <Compile Include="HttpMethodProvider.cs" />
-    <Compile Include="HttpMethodProviderCache.cs" />
-    <Compile Include="HttpMethods.cs" />
-    <Compile Include="HttpRequest.cs" />
-    <Compile Include="HttpRequestHandler.cs" />
-    <Compile Include="Handlers\HttpRouter.cs" />
-    <Compile Include="HttpResponse.cs" />
-    <Compile Include="HttpServer.cs" />
-    <Compile Include="HttpServerExtensions.cs" />
-    <Compile Include="IHttpContext.cs" />
-    <Compile Include="IHttpMethodProvider.cs" />
-    <Compile Include="LimitedStream.cs" />
-    <Compile Include="Listeners\IHttpListener.cs" />
-    <Compile Include="Listeners\SslListenerDecoerator.cs" />
-    <Compile Include="Listeners\TcpListenerAdapter.cs" />
-    <Compile Include="ModelBinders\IModelBinder.cs" />
-    <Compile Include="ModelBinders\JsonModelBinder.cs" />
-    <Compile Include="ModelBinders\ModelBinder.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="HttpResponseCode.cs" />
-    <Compile Include="RequestProviders\HttpRequestMethodDecorator.cs" />
-    <Compile Include="RequestProviders\HttpRequestProvider.cs" />
-    <Compile Include="RequestProviders\HttpRequestProviderMethodOverrideDecorator.cs" />
-    <Compile Include="RequestProviders\IHttpRequestProvider.cs" />
-    <Compile Include="RequestProviders\IStreamReader.cs" />
-    <Compile Include="TaskFactoryExtensions.cs" />
-    <Compile Include="Clients\TcpClientAdapter.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>uhttpsharp.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>True</SignAssembly>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\NovaCore.Common\NovaCore.Common.csproj">
       <Project>{afc6569a-503b-41dc-9e14-d40d59bc52e8}</Project>
